@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { useSelector } from 'react-redux'
 import { useChat } from "../hooks/useChat"
+import remarkGfm from 'remark-gfm'
 
 const Dashboard = () => {
   const chat = useChat()
@@ -31,7 +32,7 @@ const Dashboard = () => {
   }
 
   const openChat = (chatId) => {
-    chat.handleOpenChat(chatId)
+    chat.handleOpenChat(chatId, chats)
   }
 
 
@@ -119,17 +120,17 @@ const Dashboard = () => {
 
         {/* Chat list */}
         <nav className="flex flex-col gap-1 overflow-y-auto flex-1 pr-1" style={{ scrollbarWidth: 'none' }}>
-          {Object.values(chats).map((chat , index) => (
+          {Object.values(chats).map((chat, index) => (
             <button
 
-            onClick={() => { 
+              onClick={() => {
 
-              setActiveChat(chat.id)
-              openChat(chat.id)
+                setActiveChat(chat.id)
+                openChat(chat.id)
 
-            }}
-            
-            key={index}
+              }}
+
+              key={index}
               className="w-full cursor-pointer text-left px-3 py-2 rounded-xl text-sm transition-all duration-200 truncate"
               style={{
                 color: activeChat === chat.id ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.45)',
@@ -170,19 +171,33 @@ const Dashboard = () => {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col p-3 pl-0 gap-3 min-w-0">
+      <div className="messages flex-1 flex flex-col p-3 pl-0 gap-3 min-w-0">
         {/* Messages */}
-        <div className="messages flex-1 space-y-3 overflow-y-auto pr-1 pb-30">
+        <div className=" flex-1 space-y-3 overflow-y-auto pr-1 pb-30">
           {chats[currentChatId]?.messages.map((message) => (
             <div
               key={message.id}
               className={`max-w-[75%] w-fit rounded-2xl px-5 py-2.5 text-sm font-medium ${message.role === "user"
-                  ? "ml-auto bg-[linear-gradient(135deg,rgba(59,130,246,0.3),rgba(99,102,241,0.2))] backdrop-blur-[20px] border border-[rgba(99,102,241,0.3)] text-[rgba(255,255,255,0.88)] shadow-[0_4px_20px_rgba(99,102,241,0.2),inset_0_1px_0_rgba(255,255,255,0.12)]"
-                  : "mr-auto bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(99,102,241,0.08))] border border-[rgba(99,102,241,0.15)] text-[rgba(255,255,255,0.85)] shadow-[0_2px_12px_rgba(99,102,241,0.08)]"
+                ? "ml-auto bg-[linear-gradient(135deg,rgba(59,130,246,0.3),rgba(99,102,241,0.2))] backdrop-blur-[20px] border border-[rgba(99,102,241,0.3)] text-[rgba(255,255,255,0.88)] shadow-[0_4px_20px_rgba(99,102,241,0.2),inset_0_1px_0_rgba(255,255,255,0.12)]"
+                : "mr-auto bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(99,102,241,0.08))] border border-[rgba(99,102,241,0.15)] text-[rgba(255,255,255,0.85)] shadow-[0_2px_12px_rgba(99,102,241,0.08)]"
                 }`}
             >
               {message.role === "ai" ? (
-                <ReactMarkdown>{message.content}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}
+
+                  components={{
+                    p: ({ children }) => <p className='mb-2 last:mb-0'>{children}</p>,
+                    ul: ({ children }) => <ul className='mb-2 list-disc pl-5'>{children}</ul>,
+                    ol: ({ children }) => <ol className='mb-2 list-decimal pl-5'>{children}</ol>,
+                    code: ({ children }) => <code className='rounded bg-white/10 px-1 py-0.5'>{children}</code>,
+                    pre: ({ children }) => <pre className='mb-2 overflow-x-auto rounded-xl bg-black/30 p-3'>{children}</pre>
+                  }}
+
+                >
+
+                  {message.content}
+                  
+                </ReactMarkdown>
               ) : (
                 <p>{message.content}</p>
               )}
