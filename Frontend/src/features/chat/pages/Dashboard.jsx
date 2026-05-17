@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { useSelector } from 'react-redux'
 import { useChat } from "../hooks/useChat"
 
@@ -12,24 +13,12 @@ const Dashboard = () => {
   const currentChatId = useSelector((state) => state.chat.currentChatId)
 
 
-  const chatHistory = [
-    { id: 0, title: "What is quantum entanglement?" },
-    { id: 1, title: "Explain neural networks" },
-    { id: 2, title: "How does GPT work?" },
-    { id: 3, title: "Best practices in React" },
-    { id: 4, title: "Rust vs Go performance" },
-    { id: 5, title: "Docker networking basics" },
-    { id: 6, title: "TypeScript generics guide" },
-    { id: 7, title: "CSS Grid vs Flexbox" },
-  ]
-
-
-
-
-
   useEffect(() => {
     chat.initializeSocketConnection()
+    chat.handleGetChats()
   }, [])
+
+
 
   const handleSubmitMessage = (event) => {
     event.preventDefault()
@@ -40,6 +29,11 @@ const Dashboard = () => {
     chat.handleSendMessage({ message: trimmedMessage, chatId: currentChatId })
     setChatInput('')
   }
+
+  const openChat = (chatId) => {
+    chat.handleOpenChat(chatId)
+  }
+
 
   return (
     <main
@@ -125,24 +119,31 @@ const Dashboard = () => {
 
         {/* Chat list */}
         <nav className="flex flex-col gap-1 overflow-y-auto flex-1 pr-1" style={{ scrollbarWidth: 'none' }}>
-          {chatHistory.map((item) => (
+          {Object.values(chats).map((chat , index) => (
             <button
-              key={item.id}
-              onClick={() => setActiveChat(item.id)}
-              className="w-full text-left px-3 py-2 rounded-xl text-sm transition-all duration-200 truncate"
+
+            onClick={() => { 
+
+              setActiveChat(chat.id)
+              openChat(chat.id)
+
+            }}
+            
+            key={index}
+              className="w-full cursor-pointer text-left px-3 py-2 rounded-xl text-sm transition-all duration-200 truncate"
               style={{
-                color: activeChat === item.id ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.45)',
-                background: activeChat === item.id
+                color: activeChat === chat.id ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.45)',
+                background: activeChat === chat.id
                   ? 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(99,102,241,0.15))'
                   : 'transparent',
-                border: activeChat === item.id
+                border: activeChat === chat.id
                   ? '1px solid rgba(99,102,241,0.3)'
                   : '1px solid transparent',
-                boxShadow: activeChat === item.id ? '0 0 12px rgba(99,102,241,0.15)' : 'none',
-                fontWeight: activeChat === item.id ? 500 : 400,
+                boxShadow: activeChat === chat.id ? '0 0 12px rgba(99,102,241,0.15)' : 'none',
+                fontWeight: activeChat === chat.id ? 500 : 400,
               }}
             >
-              {item.title}
+              {chat.title}
             </button>
           ))}
         </nav>
@@ -180,7 +181,11 @@ const Dashboard = () => {
                   : "mr-auto bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(99,102,241,0.08))] border border-[rgba(99,102,241,0.15)] text-[rgba(255,255,255,0.85)] shadow-[0_2px_12px_rgba(99,102,241,0.08)]"
                 }`}
             >
-              <p>{message.content}</p>
+              {message.role === "ai" ? (
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              ) : (
+                <p>{message.content}</p>
+              )}
             </div>
           ))}
         </div>
