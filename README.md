@@ -206,7 +206,7 @@ Add screenshots here:
 
 ### Chat Interface
 
-![Chat](https://ik.imagekit.io/cflaypsvj/cohort-insta-clone/Screenshot%202026-05-29%20165425.png)
+![Chat](https://ik.imagekit.io/cflaypsvj/cohort-insta-clone/Screenshot%202026-05-29%20194543.png)
 
 ### AI Response
 
