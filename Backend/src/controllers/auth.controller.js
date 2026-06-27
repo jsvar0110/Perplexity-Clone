@@ -187,7 +187,7 @@ export async function verifyEmail(req, res) {
             `
             <h1>Email Verified Successfully!</h1>
             <p>Your email has been verified. You can now log in to your account.</p>
-            <a href="http://localhost:3000/login">Go to Login</a>
+            <a href="http://localhost:5173/login">Go to Login</a>
 
             `
 
@@ -202,7 +202,7 @@ export async function verifyEmail(req, res) {
         return res.status(400).json({
             message: "Invalidor or expired token",
             success: false,
-            err: err.message
+            err: error.message
         })
 
     }
