@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link , useNavigate } from "react-router";
-import { Navigate } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../hook/useAuth";
 
 const Input = ({
     icon,
@@ -27,10 +27,11 @@ const Input = ({
                 required
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
-                className={`w-full bg-[#ffffff0a] border rounded-xl py-3 pl-10 pr-4 text-sm text-slate-200 outline-none transition-all ${focused
+                className={`w-full bg-[#ffffff0a] border rounded-xl py-3 pl-10 pr-4 text-sm text-slate-200 outline-none transition-all ${
+                    focused
                         ? "border-[#31b8c6]"
                         : "border-[#31b8c633]"
-                    }`}
+                }`}
             />
         </div>
     );
@@ -43,22 +44,43 @@ export default function Register() {
         password: "",
     });
 
+    const navigate = useNavigate();
+    const { handleRegister } = useAuth();
+
     const onChange = (e) =>
         setForm((prev) => ({
             ...prev,
             [e.target.name]: e.target.value,
         }));
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
-        console.log("Register Data:", form);
+        try {
+            await handleRegister({
+                username: form.username,
+                email: form.email,
+                password: form.password,
+            });
+
+            alert(
+                "Registration successful! Please verify your email before logging in."
+            );
+
+            navigate("/login");
+        } catch (error) {
+            console.error(error);
+
+            alert(
+                error?.response?.data?.message ||
+                "Registration failed. Please try again."
+            );
+        }
     };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#061216] p-4">
             <div className="w-full max-w-md bg-[#0d1b20] border border-[#31b8c633] rounded-3xl p-8 shadow-[0_0_40px_rgba(49,184,198,0.2)]">
-
                 <div className="text-center mb-8">
                     <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-[#31b8c6] to-[#1d6f78] mx-auto mb-4 flex items-center justify-center text-white text-2xl">
                         🚀
@@ -74,7 +96,6 @@ export default function Register() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-
                     <Input
                         type="text"
                         name="username"
@@ -111,8 +132,11 @@ export default function Register() {
                 </form>
 
                 <p className="text-center text-slate-400 mt-6">
-                    Already have an account?
-                    <Link to="/login" className="font-semibold text-[#31b8c6] transition hover:text-[#45c7d4]">
+                    Already have an account?{" "}
+                    <Link
+                        to="/login"
+                        className="font-semibold text-[#31b8c6] transition hover:text-[#45c7d4]"
+                    >
                         Login
                     </Link>
                 </p>
