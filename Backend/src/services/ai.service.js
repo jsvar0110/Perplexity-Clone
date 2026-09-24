@@ -1,5 +1,6 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatMistralAI } from '@langchain/mistralai'
+import { ChatGroq } from "@langchain/groq"
 import { HumanMessage, SystemMessage, AIMessage, tool, createAgent } from "langchain"
 import * as z from "zod"
 import { searchInternet } from "./internet.service.js";
@@ -9,8 +10,13 @@ const geminiModel = new ChatGoogleGenerativeAI({
     apiKey: process.env.GEMINI_API_KEY
 });
 
+const groqModel = new ChatGroq({
+    model: "openai/gpt-oss-120b",
+    apiKey: process.env.GROQ_API_KEY
+});
+
 const mistralModel = new ChatMistralAI({
-    model: "mistral-small-latest",
+    model: "mistral-small-2603",
     apiKey: process.env.MISTRAL_API_KEY
 })
 
@@ -25,57 +31,111 @@ const searchInternetTool = tool(
     }
 )
 
-const agent = createAgent({
-    model: mistralModel,
-    tools: [searchInternetTool]
-})
+// Create each agent once at startup, not per-request
+const agents = {
+    groq: createAgent({ model: groqModel, tools: [searchInternetTool] }),
+    gemini: createAgent({ model: geminiModel, tools: [searchInternetTool] }),
+    mistral: createAgent({ model: mistralModel, tools: [searchInternetTool] }),
+}
 
+// Order = priority. First is tried first, falls back down the list.
+const MODEL_CHAIN = [
+    { name: "groq", model: groqModel, agent: agents.groq },
+    { name: "gemini", model: geminiModel, agent: agents.gemini },
+    { name: "mistral", model: mistralModel, agent: agents.mistral },
+]
 
+function isRetryableError(err) {
+    const status = err?.status || err?.statusCode || err?.error?.code;
+
+    return (
+        status === 429 ||
+        status === 500 ||
+        status === 502 ||
+        status === 503 ||
+        status === 504 ||
+        /429|quota|rate.?limit|overloaded|temporarily unavailable|service unavailable/i
+            .test(err?.message || "")
+    );
+}
+
+async function runWithFallback(fn) {
+    let lastErr;
+    for (const entry of MODEL_CHAIN) {
+        const start = Date.now();
+        try {
+            const res = await fn(entry);
+            console.log(`[${entry.name}] succeeded in ${Date.now() - start}ms`)
+            return res ;
+        } catch (err) {
+            console.warn(`[${entry.name}] failed in ${Date.now() - start}ms`, err.message);
+            lastErr = err;
+
+            if (isRetryableError(err)) continue ;
+
+            throw err; // non-retryable error — surface it immediately
+        }
+    }
+    throw lastErr; // all models exhausted
+}
 
 export async function generateResponse(messages) {
 
+    const langchainMessages = [
+        new SystemMessage(`Your name is Veltrix, you are a helpful and precise assistant made by Varad.
+                        Today's date is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
 
-    const response = await agent.invoke({
+                        You are capable of reasoning, math, writing, coding, and general problem-solving on your own — 
+                        use your own knowledge and reasoning to answer directly whenever possible.
 
+                        Only use the "searchInternet" tool when the question depends on current events, 
+                        real-time data, or information that could have changed after your training 
+                        (e.g. news, prices, recent releases). Do not use it for math, logic, writing, or 
+                        general knowledge questions — answer those yourself.
 
-        messages: [
+                        If a question mentions words like "recently", "latest", "this week", "today", 
+                        or refers to a specific event/person/statement without giving a date, ALWAYS use 
+                        searchInternet first — even if you feel confident you already know the answer. 
+                        Your training data has a cutoff and can be outdated; world events change quickly, 
+                        and a similar-sounding event may have already happened before under different 
+                        circumstances. Never answer such questions purely from memory.
 
-            new SystemMessage(`
-                You are a helpful and precise assistant for answering questions.
-                If you don't know the answer, say you don't know. 
-                If the question requires up-to-date information, use the "searchInternet" tool to get the latest information from the internet and then answer based on the search results.
-                `)
-            ,
+                        If you genuinely don't know something and search didn't help, say so — do not guess.`),
 
-            ...(messages.map(msg => {
-                if (msg.role === "user") {
-                    return new HumanMessage(msg.content)
-                } else if (msg.role === "ai") {
-                    return new AIMessage(msg.content)
-                }
-            }))]
+        ...(messages
+            .map(msg => {
+                if (msg.role === "user") return new HumanMessage(msg.content);
+                if (msg.role === "ai") return new AIMessage(msg.content);
+                return null; // unknown role — drop it instead of pushing undefined
+            })
+            .filter(Boolean)
+        )
+    ]
 
+    const response = await runWithFallback(async ({ agent }) => {
+        return await agent.invoke({ messages: langchainMessages })
     })
 
-
-    return response.messages[response.messages.length - 1].text
-
+    const last = response.messages[response.messages.length - 1];
+    return typeof last.content === "string"
+        ? last.content
+        : last.content.filter(b => b.type === "text").map(b => b.text).join("");
 }
 
 export async function generateChatTitle(message) {
 
+    const response = await runWithFallback(async ({ model }) => {
+        return await model.invoke([
+            new SystemMessage(`You generate short chat titles.
 
-    const response = await mistralModel.invoke([
-        new SystemMessage(`You are a helpful assistant that generates 
-            concise and descriptive titles for chat conversations.
-            
-            User will provide you with the first message of a chat conversation, 
-            and you will generate a title that captures the essence of the conversation in 2-4 words.
-            The title should be clear, relevant, and engaging, giving users a quick understanding of the chat's topic.`)
-        ,
-        new HumanMessage(`Generate a title for a chat conversation based on the following first message: "${message}"`)
-    ])
+                Rules:
+                - Output ONLY the title text, nothing else.
+                - No quotes, no punctuation at the end, no preamble like "Here is your title:".
+                - Maximum 4 words.
+                - Must clearly reflect the topic of the user's message.`),
+            new HumanMessage(`First message: "${message}"`)
+        ])
+    })
 
-    return response.text
-
+    return response.content
 }

@@ -1,0 +1,230 @@
+/* ============================================================
+   VELTRIX AI — AUTH PAGES (Login / Register)
+   Axora-inspired dark design system
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* ── Animations ── */
+@keyframes auth-blob-1 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  50%      { transform: translate(55px,-45px) scale(1.1); }
+}
+@keyframes auth-blob-2 {
+  0%,100% { transform: translate(0,0) scale(1.05); }
+  50%      { transform: translate(-50px,40px) scale(0.93); }
+}
+@keyframes auth-blob-3 {
+  0%,100% { transform: translate(0,0) scale(0.9); }
+  50%      { transform: translate(40px,55px) scale(1.18); }
+}
+@keyframes auth-fade-in {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes auth-pulse {
+  0%,100% { opacity:.55; }
+  50%      { opacity:1; }
+}
+@keyframes auth-orb-pulse {
+  0%,100% { transform:scale(1); opacity:.7; }
+  50%      { transform:scale(1.06); opacity:1; }
+}
+
+.auth-blob-1 { animation: auth-blob-1 22s ease-in-out infinite; }
+.auth-blob-2 { animation: auth-blob-2 26s ease-in-out infinite; }
+.auth-blob-3 { animation: auth-blob-3 30s ease-in-out infinite; }
+.auth-fade-in { animation: auth-fade-in .48s ease both; }
+.auth-pulse   { animation: auth-pulse 3s ease infinite; }
+.auth-orb-pulse { animation: auth-orb-pulse 3.5s ease infinite; }
+
+/* ── Layout ── */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  background: #0b0b12;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Background grid ── */
+.auth-grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,.013) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,.013) 1px, transparent 1px);
+  background-size: 3.5rem 3.5rem;
+  mask-image: radial-gradient(ellipse 65% 55% at 50% 40%, #000 65%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 65% 55% at 50% 40%, #000 65%, transparent 100%);
+}
+
+/* ── Hero panel (left ~55%) ── */
+.auth-hero {
+  flex: 0 0 55%;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2.25rem;
+  background: rgba(11,11,18,.6);
+  border-right: 1px solid rgba(255,255,255,.05);
+}
+
+/* ── Auth form panel (right 45%) ── */
+.auth-form-panel {
+  flex: 0 0 45%;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+/* ── Glass card ── */
+.auth-card {
+  width: 100%;
+  max-width: 410px;
+  background: rgba(19,19,27,.8);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 20px;
+  padding: 2rem;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  box-shadow: 0 24px 56px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+}
+
+/* ── Telemetry box ── */
+.auth-telemetry {
+  background: rgba(13,13,21,.72);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05);
+  width: 100%;
+  max-width: 480px;
+}
+
+/* ── Chip ── */
+.auth-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  background: rgba(139,92,246,.15);
+  color: #c4b5fd;
+  border: 1px solid rgba(139,92,246,.3);
+}
+
+/* ── Metric cell ── */
+.auth-metric {
+  padding: .75rem;
+  border-radius: 8px;
+  background: rgba(255,255,255,.025);
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+/* ── Input field ── */
+.auth-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  padding: .75rem 1rem .75rem 2.6rem;
+  color: #f8fafc;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  transition: border-color .22s, box-shadow .22s;
+}
+.auth-input:focus {
+  border-color: rgba(139,92,246,.75);
+  box-shadow: 0 0 0 3px rgba(139,92,246,.18);
+}
+.auth-input::placeholder { color: rgba(203,195,215,.38); }
+.auth-input.no-icon { padding-left: 1rem; }
+
+/* ── Label ── */
+.auth-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgba(203,195,215,.8);
+  margin-bottom: 6px;
+}
+
+/* ── Submit button ── */
+.auth-submit-btn {
+  width: 100%;
+  padding: .85rem;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  box-shadow: 0 0 24px rgba(139,92,246,.45);
+  transition: all .2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.auth-submit-btn:hover {
+  box-shadow: 0 0 36px rgba(139,92,246,.65);
+  transform: scale(1.01);
+}
+.auth-submit-btn:active { transform: scale(.98); }
+
+/* ── Logo box (gradient border) ── */
+.auth-logo-box {
+  background: linear-gradient(135deg, #8b5cf6, #c084fc, #6366f1);
+  border-radius: 10px;
+  padding: 1.5px;
+  box-shadow: 0 0 14px rgba(139,92,246,.45);
+}
+.auth-logo-inner {
+  background: #0b0b12;
+  border-radius: calc(10px - 1.5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.auth-logo-inner img {
+  filter: brightness(1.05);
+  object-fit: contain;
+}
+
+/* ── Feature item row ── */
+.auth-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.auth-feature-chip {
+  display: flex;
+  align-items: center;
+  gap: .375rem;
+  padding: .35rem .875rem;
+  border-radius: 9999px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  color: rgba(203,195,215,.8);
+  font-size: 12px;
+}
+
+/* ── Responsive: stack on mobile ── */
+@media (max-width: 768px) {
+  .auth-hero { display: none; }
+  .auth-form-panel { flex: 1; }
+}
