@@ -123,8 +123,8 @@ const Dashboard = () => {
 
   // Scroll to bottom on new messages
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [chats, currentChatId])
+    chatBottomRef.current?.scrollIntoView({ behavior: 'auto' })
+  }, [currentChatId])
 
   const handleSubmit = (e) => {
     e?.preventDefault()

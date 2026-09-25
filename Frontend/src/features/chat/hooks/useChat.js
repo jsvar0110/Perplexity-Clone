@@ -4,7 +4,8 @@ import {
     setChats, setCurrentChatId, setError,
     setLoading, createNewChat, updateChatTitle,
     addNewMessage, addMessages, startStreamingMessage,
-    appendStreamingMessage, updateStreamingStatus, finishStreamingMessage } from "../chat.slice"
+    appendStreamingMessage, updateStreamingStatus, finishStreamingMessage
+} from "../chat.slice"
 import { useDispatch } from "react-redux"
 
 export const useChat = () => {
@@ -51,10 +52,7 @@ export const useChat = () => {
 
     // }
 
-    async function handleSendMessage({
-    message,
-    chatId
-}) {
+    async function handleSendMessage({ message , chatId}) {
 
     dispatch(setLoading(true))
     dispatch(setError(null))
@@ -136,7 +134,40 @@ export const useChat = () => {
 
 
         // ==========================================
-        // 5. START STREAM
+        // 5. STREAM BUFFER
+        // ==========================================
+
+        const STREAM_FLUSH_INTERVAL = 60
+
+        let tokenBuffer = ""
+        let flushTimer = null
+
+
+        // ------------------------------------------
+        // Flush buffered tokens into Redux
+        // ------------------------------------------
+
+        const flushTokens = () => {
+
+            if (!tokenBuffer) {
+                flushTimer = null
+                return
+            }
+
+            dispatch(
+                appendStreamingMessage({
+                    chatId: activeChatId,
+                    content: tokenBuffer
+                })
+            )
+
+            tokenBuffer = ""
+            flushTimer = null
+        }
+
+
+        // ==========================================
+        // 6. START STREAM
         // ==========================================
 
         await streamMessage({
@@ -153,10 +184,12 @@ export const useChat = () => {
 
                 if (event.type === "status") {
 
-                    dispatch(updateStreamingStatus({
-                        chatId: activeChatId,
-                        status: event.status
-                    }))
+                    dispatch(
+                        updateStreamingStatus({
+                            chatId: activeChatId,
+                            status: event.status
+                        })
+                    )
 
                     return
                 }
@@ -168,12 +201,25 @@ export const useChat = () => {
 
                 if (event.type === "token") {
 
-                    dispatch(
-                        appendStreamingMessage({
-                            chatId: activeChatId,
-                            content: event.content
-                        })
-                    )
+                    // Add incoming token/chunk
+                    // to the buffer.
+
+                    tokenBuffer += event.content
+
+
+                    // Only create one timer.
+                    //
+                    // Any tokens received during
+                    // these 60ms are added to the
+                    // same buffer.
+
+                    if (!flushTimer) {
+
+                        flushTimer = setTimeout(
+                            flushTokens,
+                            STREAM_FLUSH_INTERVAL
+                        )
+                    }
 
                     return
                 }
@@ -184,6 +230,23 @@ export const useChat = () => {
                 // -------------------------------
 
                 if (event.type === "complete") {
+
+                    // Cancel pending timer
+                    if (flushTimer) {
+
+                        clearTimeout(flushTimer)
+
+                        flushTimer = null
+                    }
+
+
+                    // IMPORTANT: Render anything that is still
+                    // inside the buffer.
+
+                    flushTokens()
+
+
+                    // Now mark streaming as finished.
 
                     dispatch(
                         finishStreamingMessage({
@@ -201,13 +264,27 @@ export const useChat = () => {
 
                 if (event.type === "error") {
 
-                    dispatch(setError(
+                    console.error(
+                        "AI streaming error:",
                         event.message
-                    ))
+                    )
+
+                    dispatch(
+                        setError(
+                            event.message ||
+                            "AI response failed"
+                        )
+                    )
+
+                    return
                 }
             }
         })
 
+
+        // ==========================================
+        // 7. KEEP CURRENT CHAT ACTIVE
+        // ==========================================
 
         dispatch(
             setCurrentChatId(activeChatId)
@@ -220,10 +297,12 @@ export const useChat = () => {
             error
         )
 
-        dispatch(setError(
-            error.message ||
-            "Something went wrong"
-        ))
+        dispatch(
+            setError(
+                error.message ||
+                "Something went wrong"
+            )
+        )
 
     } finally {
 
