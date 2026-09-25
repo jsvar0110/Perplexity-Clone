@@ -1,51 +1,166 @@
 import { initializeSocketConnection } from "../service/chat.socket"
-import { sendMessage, getChats, getMessages, deleteChat } from "../service/chat.api"
-import { setChats, setCurrentChatId, setError, setLoading, createNewChat, addNewMessage, addMessages } from "../chat.slice"
+import { createChat , generateTitle , sendMessage, getChats, getMessages, deleteChat } from "../service/chat.api"
+import { setChats, setCurrentChatId, setError, setLoading, createNewChat,updateChatTitle , addNewMessage, addMessages } from "../chat.slice"
 import { useDispatch } from "react-redux"
 
 export const useChat = () => {
     const dispatch = useDispatch()
 
+    // async function handleSendMessage({ message, chatId }) {
+    //     dispatch(setLoading(true))
+    //     const data = await sendMessage({ message, chatId })
+    //     const { chat, aiMessage } = data
+
+
+
+    //     try {
+
+    //         if (!chatId)
+    //             dispatch(createNewChat({
+    //                 chatId: chat._id,
+    //                 title: chat.title
+    //             }))
+
+    //         dispatch(addNewMessage({
+    //             chatId: chatId || chat._id,
+    //             content: message,
+    //             role: "user"
+    //         }))
+
+    //         dispatch(addNewMessage({
+    //             chatId: chatId || chat._id,
+    //             content: aiMessage.content,
+    //             role: aiMessage.role
+    //         }))
+
+    //         dispatch(setCurrentChatId(chat._id))
+
+    //     } catch (err) {
+
+    //         dispatch(setError(err.message))
+
+    //     } finally {
+
+    //         dispatch(setLoading(false))
+
+    //     }
+
+    // }
+
     async function handleSendMessage({ message, chatId }) {
-        dispatch(setLoading(true))
-        const data = await sendMessage({ message, chatId })
-        const { chat, aiMessage } = data
 
+    dispatch(setLoading(true))
+    dispatch(setError(null))
 
+    try {
 
-        try {
+        let activeChatId = chatId
 
-            if (!chatId)
-                dispatch(createNewChat({
-                    chatId: chat._id,
-                    title: chat.title
-                }))
+        // ==========================================
+        // 1. NEW CHAT
+        // ==========================================
 
-            dispatch(addNewMessage({
-                chatId: chatId || chat._id,
-                content: message,
-                role: "user"
+        if (!activeChatId) {
+
+            const chatData = await createChat()
+
+            const newChat = chatData.chat
+
+            activeChatId = newChat._id
+
+            // Immediately add chat to Redux
+            dispatch(createNewChat({
+                chatId: newChat._id,
+                title: "New Chat"
             }))
 
-            dispatch(addNewMessage({
-                chatId: chatId || chat._id,
-                content: aiMessage.content,
-                role: aiMessage.role
-            }))
-
-            dispatch(setCurrentChatId(chat._id))
-
-        } catch (err) {
-
-            dispatch(setError(err.message))
-
-        } finally {
-
-            dispatch(setLoading(false))
-
+            // Immediately open the new chat
+            dispatch(setCurrentChatId(newChat._id))
         }
 
+        // ==========================================
+        // 2. SHOW USER MESSAGE IMMEDIATELY
+        // ==========================================
+
+        dispatch(addNewMessage({
+            chatId: activeChatId,
+            content: message,
+            role: "user"
+        }))
+
+
+        // ==========================================
+        // 3. GENERATE TITLE
+        // ==========================================
+
+        if (!chatId) {
+
+            generateTitle({
+                chatId: activeChatId,
+                message
+            })
+                .then((data) => {
+
+                    dispatch(updateChatTitle({
+                        chatId: activeChatId,
+                        title: data.title
+                    }))
+
+                })
+                .catch((err) => {
+
+                    console.error(
+                        "Title generation failed:",
+                        err
+                    )
+
+                })
+        }
+
+
+        // ==========================================
+        // 4. GENERATE AI RESPONSE
+        // ==========================================
+
+        const data = await sendMessage({
+            message,
+            chatId: activeChatId
+        })
+
+        const { aiMessage } = data
+
+
+        // ==========================================
+        // 5. ADD AI RESPONSE
+        // ==========================================
+
+        dispatch(addNewMessage({
+            chatId: activeChatId,
+            content: aiMessage.content,
+            role: aiMessage.role
+        }))
+
+
+        // Make absolutely sure this chat remains active
+        dispatch(setCurrentChatId(activeChatId))
+
+
+    } catch (err) {
+
+        console.error(err)
+
+        dispatch(setError(
+            err.response?.data?.message ||
+            err.message ||
+            "Something went wrong"
+        ))
+
+    } finally {
+
+        dispatch(setLoading(false))
+
     }
+}
 
     async function handleGetChats() {
         dispatch(setLoading(true))
@@ -58,7 +173,7 @@ export const useChat = () => {
                 id: chat._id,
                 title: chat.title,
                 messages: [],
-                Lastupdated: chat.updatedAt,
+                lastUpdated: chat.updatedAt,
             }
             return acc
         }, {})))

@@ -38,7 +38,7 @@ const SmallLogo = () => (
 
 const Dashboard = () => {
   const chat = useChat()
-  const [activeChat, setActiveChat] = useState(null)
+  // const [activeChat, setActiveChat] = useState(null)
   const [chatInput, setChatInput] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -55,7 +55,12 @@ const Dashboard = () => {
   const userInitial = userName.charAt(0).toUpperCase()
 
   // Filtered chats by search
-  const chatList = Object.values(chats)
+  const chatList = Object.values(chats).sort(
+    (a, b) =>
+      new Date(b.lastUpdated || 0) -
+      new Date(a.lastUpdated || 0)
+  )
+  
   const filteredChats = searchQuery
     ? chatList.filter(c => c.title?.toLowerCase().includes(searchQuery.toLowerCase()))
     : chatList
@@ -80,9 +85,8 @@ const Dashboard = () => {
   }
 
   const openChat = (chatId) => {
-    setActiveChat(chatId)
     chat.handleOpenChat(chatId, chats)
-    setSidebarOpen(false) // close mobile sidebar
+    setSidebarOpen(false)
   }
 
   const closeSidebar = () => setSidebarOpen(false)
@@ -122,7 +126,9 @@ const Dashboard = () => {
             <span className="vx-brand-name">Veltrix AI</span>
           </div>
           <button
-            onClick={() => { setActiveChat(null); dispatch(setCurrentChatId(null)); }}
+            onClick={() => {
+              dispatch(setCurrentChatId(null))
+            }}
             className="vx-icon-btn"
             title="New Chat"
           >
@@ -152,7 +158,8 @@ const Dashboard = () => {
             filteredChats.map((c) => (
               <button
                 key={c.id}
-                className={`vx-chat-entry ${activeChat === c.id ? 'active' : ''}`}
+                className={`vx-chat-entry ${currentChatId === c.id ? 'active' : ''}`}
+
                 onClick={() => openChat(c.id)}
               >
                 <span className="vx-chat-dot" />

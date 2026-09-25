@@ -2,52 +2,85 @@ import { generateResponse , generateChatTitle } from "../services/ai.service.js"
 import chatModel from '../models/chat.model.js'
 import messageModel from "../models/message.model.js"
 
-export async function sendMessage(req , res) {
- 
-    const {message , chat : chatId} = req.body
+export async function sendMessage(req, res) {
 
-    
-
-    let title = null , chat = null ;
-    
+    const { message, chat: chatId } = req.body
 
     if (!chatId) {
-        title =  await generateChatTitle(message)
-        chat = await chatModel.create({
-            user : req.user.id ,
-            title
+        return res.status(400).json({
+            message: "Chat ID is required"
         })
     }
-    
-    const userMessage = await messageModel.create({
-        chat : chatId || chat._id ,
-        content : message ,
-        role : 'user'
+
+    // Save user message
+    await messageModel.create({
+        chat: chatId,
+        content: message,
+        role: 'user'
     })
 
-    const messages = await messageModel.find({chat : chatId || chat._id})
+    // Get previous messages
+    const messages = await messageModel.find({
+        chat: chatId
+    })
 
+    // Generate AI response
     const result = await generateResponse(messages)
 
-
-     const aiMessage = await messageModel.create({
-        chat :  chatId ||chat._id ,
-        content : result ,
-        role : 'ai'
+    // Save AI message
+    const aiMessage = await messageModel.create({
+        chat: chatId,
+        content: result,
+        role: 'ai'
     })
-
-
-    console.log(messages)
-
 
     res.status(201).json({
-        title ,
-        chat ,
-        aiMessage , 
+        aiMessage
+    })
+}
+
+
+export async function createChat(req, res) {
+
+    const chat = await chatModel.create({
+        user: req.user.id,
+        title: "New Chat"
     })
 
-
+    res.status(201).json({
+        chat
+    })
 }
+
+
+export async function generateTitle(req, res) {
+
+    const { chatId, message } = req.body
+
+    const chat = await chatModel.findOne({
+        _id: chatId,
+        user: req.user.id
+    })
+
+    if (!chat) {
+        return res.status(404).json({
+            message: "Chat not found"
+        })
+    }
+
+    const title = await generateChatTitle(message)
+
+    chat.title = title
+
+    await chat.save()
+
+    res.status(200).json({
+        chatId: chat._id,
+        title: chat.title
+    })
+}
+
+
 
 export async function getChats(req , res) {
 
