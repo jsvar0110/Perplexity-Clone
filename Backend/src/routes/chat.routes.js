@@ -3,6 +3,7 @@ import {
     createChat,
     generateTitle,
     sendMessage,
+    streamMessage, 
     getChats,
     getMessages,
     deleteChat
@@ -15,6 +16,9 @@ const chatRouter = Router()
 
 chatRouter.post('/create' , authUser , createChat)
 chatRouter.post('/title', authUser ,generateTitle )
+
+//Stream Response
+chatRouter.post('/message/stream' , authUser , streamMessage)
 
 chatRouter.post('/message', authUser, sendMessage)
 

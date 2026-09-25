@@ -66,12 +66,12 @@ async function runWithFallback(fn) {
         try {
             const res = await fn(entry);
             console.log(`[${entry.name}] succeeded in ${Date.now() - start}ms`)
-            return res ;
+            return res;
         } catch (err) {
             console.warn(`[${entry.name}] failed in ${Date.now() - start}ms`, err.message);
             lastErr = err;
 
-            if (isRetryableError(err)) continue ;
+            if (isRetryableError(err)) continue;
 
             throw err; // non-retryable error — surface it immediately
         }
@@ -121,6 +121,160 @@ export async function generateResponse(messages) {
         ? last.content
         : last.content.filter(b => b.type === "text").map(b => b.text).join("");
 }
+
+
+export async function streamResponse(messages, sendEvent) {
+
+    const langchainMessages = [
+        new SystemMessage(`Your name is Veltrix, you are a helpful and precise assistant made by Varad.
+                        
+                        Today's date is ${new Date().toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        })}.
+
+                        You are capable of reasoning, math, writing, coding, and general problem-solving on your own.
+
+                        Only use the "searchInternet" tool when the question depends on current events,
+                        real-time data, or information that could have changed after your training.
+
+                        If a question mentions words like "recently", "latest", "this week", "today",
+                        or refers to a specific event/person/statement without giving a date,
+                        ALWAYS use searchInternet first.
+
+                        If you genuinely don't know something and search didn't help, say so.
+                        Do not guess.`),
+
+        ...(messages
+            .map(msg => {
+                if (msg.role === "user") {
+                    return new HumanMessage(msg.content)
+                }
+
+                if (msg.role === "ai") {
+                    return new AIMessage(msg.content)
+                }
+
+                return null
+            })
+            .filter(Boolean)
+        )
+    ]
+
+    let fullResponse = ""
+
+    const agent = agents.groq
+
+    sendEvent({
+        type: "status",
+        status: "thinking",
+        message: "Understanding your question..."
+    })
+
+    try {
+
+        const stream = await agent.streamEvents(
+            {
+                messages: langchainMessages
+            },
+            {
+                version: "v2"
+            }
+        )
+
+        for await (const event of stream) {
+
+            // =========================================
+            // TOOL START
+            // =========================================
+
+            if (event.event === "on_tool_start") {
+
+                if (event.name === "searchInternet") {
+
+                    sendEvent({
+                        type: "status",
+                        status: "searching",
+                        message: "Searching the web..."
+                    })
+                }
+            }
+
+
+            // =========================================
+            // TOOL END
+            // =========================================
+
+            if (event.event === "on_tool_end") {
+
+                if (event.name === "searchInternet") {
+
+                    sendEvent({
+                        type: "status",
+                        status: "researching",
+                        message: "Reviewing search results..."
+                    })
+                }
+            }
+
+
+            // =========================================
+            // MODEL STREAM
+            // =========================================
+
+            if (event.event === "on_chat_model_stream") {
+
+                const chunk = event.data?.chunk
+
+                if (!chunk) continue
+
+                let text = ""
+
+                if (typeof chunk.content === "string") {
+
+                    text = chunk.content
+
+                } else if (Array.isArray(chunk.content)) {
+
+                    text = chunk.content
+                        .filter(item => item.type === "text")
+                        .map(item => item.text)
+                        .join("")
+                }
+
+                if (!text) continue
+
+                fullResponse += text
+
+                sendEvent({
+                    type: "token",
+                    content: text
+                })
+            }
+        }
+
+        sendEvent({
+            type: "complete"
+        })
+
+        return fullResponse
+
+    } catch (error) {
+
+        console.error("Streaming AI error:", error)
+
+        sendEvent({
+            type: "error",
+            message: "Something went wrong while generating the response."
+        })
+
+        throw error
+    }
+}
+
+
 
 export async function generateChatTitle(message) {
 

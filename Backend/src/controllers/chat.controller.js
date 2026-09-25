@@ -1,4 +1,4 @@
-import { generateResponse , generateChatTitle } from "../services/ai.service.js";
+import { generateResponse , generateChatTitle , streamResponse } from "../services/ai.service.js";
 import chatModel from '../models/chat.model.js'
 import messageModel from "../models/message.model.js"
 
@@ -38,6 +38,110 @@ export async function sendMessage(req, res) {
         aiMessage
     })
 }
+
+
+export async function streamMessage(req, res) {
+
+    const { message, chat: chatId } = req.body
+
+    if (!chatId) {
+        return res.status(400).json({
+            message: "Chat ID is required"
+        })
+    }
+
+    // ==========================================
+    // SSE HEADERS
+    // ==========================================
+
+    res.setHeader("Content-Type", "text/event-stream")
+    res.setHeader("Cache-Control", "no-cache")
+    res.setHeader("Connection", "keep-alive")
+    res.setHeader("X-Accel-Buffering", "no")
+
+    res.flushHeaders?.()
+
+
+    // ==========================================
+    // SEND SSE EVENT
+    // ==========================================
+
+    const sendEvent = (data) => {
+
+        res.write(
+            `data: ${JSON.stringify(data)}\n\n`
+        )
+    }
+
+
+    try {
+
+        // ==========================================
+        // SAVE USER MESSAGE
+        // ==========================================
+
+        await messageModel.create({
+            chat: chatId,
+            content: message,
+            role: "user"
+        })
+
+
+        // ==========================================
+        // GET CHAT HISTORY
+        // ==========================================
+
+        const messages = await messageModel.find({
+            chat: chatId
+        })
+
+
+        // ==========================================
+        // START AI STREAM
+        // ==========================================
+
+        const fullResponse = await streamResponse(
+            messages,
+            sendEvent
+        )
+
+
+        // ==========================================
+        // SAVE COMPLETE AI RESPONSE
+        // ==========================================
+
+        const aiMessage = await messageModel.create({
+            chat: chatId,
+            content: fullResponse,
+            role: "ai"
+        })
+
+
+        // ==========================================
+        // SEND FINAL EVENT
+        // ==========================================
+
+        sendEvent({
+            type: "saved",
+            messageId: aiMessage._id
+        })
+
+
+        res.end()
+
+    } catch (error) {
+
+        console.error(error)
+
+        sendEvent({
+            type: "error",
+            message: error.message || "AI response failed"
+        })
+
+        res.end()
+    }
+}
+
 
 
 export async function createChat(req, res) {

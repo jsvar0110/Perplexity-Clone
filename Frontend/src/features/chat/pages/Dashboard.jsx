@@ -36,6 +36,57 @@ const SmallLogo = () => (
   </svg>
 )
 
+const AIActivity = ({ status }) => {
+
+  const statusMap = {
+    thinking: {
+      icon: "psychology",
+      text: "Understanding your question..."
+    },
+
+    searching: {
+      icon: "travel_explore",
+      text: "Searching the web..."
+    },
+
+    researching: {
+      icon: "menu_book",
+      text: "Reviewing search results..."
+    },
+
+    writing: {
+      icon: "edit_note",
+      text: "Writing response..."
+    }
+  }
+
+  const current =
+    statusMap[status] ||
+    statusMap.thinking
+
+  return (
+    <div className="vx-ai-activity">
+
+      <span
+        className="material-symbols-outlined vx-activity-icon"
+      >
+        {current.icon}
+      </span>
+
+      <span className="vx-activity-text">
+        {current.text}
+      </span>
+
+      <span className="vx-activity-dots">
+        <span />
+        <span />
+        <span />
+      </span>
+
+    </div>
+  )
+}
+
 const Dashboard = () => {
   const chat = useChat()
   // const [activeChat, setActiveChat] = useState(null)
@@ -60,7 +111,7 @@ const Dashboard = () => {
       new Date(b.lastUpdated || 0) -
       new Date(a.lastUpdated || 0)
   )
-  
+
   const filteredChats = searchQuery
     ? chatList.filter(c => c.title?.toLowerCase().includes(searchQuery.toLowerCase()))
     : chatList
@@ -382,20 +433,29 @@ const Dashboard = () => {
 
                         {/* Markdown content */}
                         <div className="vx-prose">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm, remarkMath]}
-                            rehypePlugins={[rehypeKatex]}
-                            components={{
-                              p: ({ children }) => <p>{children}</p>,
-                              ul: ({ children }) => <ul>{children}</ul>,
-                              ol: ({ children }) => <ol>{children}</ol>,
-                              strong: ({ children }) => <strong>{children}</strong>,
-                              code: ({ children }) => <code>{children}</code>,
-                              pre: ({ children }) => <pre>{children}</pre>,
-                            }}
-                          >
-                            {msg.content}
-                          </ReactMarkdown>
+
+                          {/* AI activity status */}
+                          {msg.isStreaming && (
+                            <AIActivity status={msg.status} />
+                          )}
+
+                          {msg.content && (
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm, remarkMath]}
+                              rehypePlugins={[rehypeKatex]}
+                              components={{
+                                p: ({ children }) => <p>{children}</p>,
+                                ul: ({ children }) => <ul>{children}</ul>,
+                                ol: ({ children }) => <ol>{children}</ol>,
+                                strong: ({ children }) => <strong>{children}</strong>,
+                                code: ({ children }) => <code>{children}</code>,
+                                pre: ({ children }) => <pre>{children}</pre>,
+                              }}
+                            >
+                              {msg.content}
+                            </ReactMarkdown>
+                          )}
+
                         </div>
 
                         {/* Action dock */}

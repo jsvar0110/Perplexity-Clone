@@ -53,6 +53,106 @@ const chatSlice = createSlice({
             state.chats[chatId].messages.push(...messages)
         }
         ,
+
+        startStreamingMessage: (state, action) => {
+
+            const {
+                chatId,
+                content = ""
+            } = action.payload
+
+            if (!state.chats[chatId]) return
+
+            state.chats[chatId].messages.push({
+                content,
+                role: "ai",
+                isStreaming: true,
+                status: "thinking"
+            })
+
+            state.chats[chatId].lastUpdated =
+                new Date().toISOString()
+        }
+        ,
+        appendStreamingMessage: (state, action) => {
+
+            const {
+                chatId,
+                content
+            } = action.payload
+
+            if (!state.chats[chatId]) return
+
+            const messages =
+                state.chats[chatId].messages
+
+            const lastMessage =
+                messages[messages.length - 1]
+
+            if (
+                !lastMessage ||
+                lastMessage.role !== "ai" ||
+                !lastMessage.isStreaming
+            ) {
+                return
+            }
+
+            lastMessage.content += content
+
+            lastMessage.status = "writing"
+
+            state.chats[chatId].lastUpdated =
+                new Date().toISOString()
+        }
+        ,
+        updateStreamingStatus: (state, action) => {
+
+            const {
+                chatId,
+                status
+            } = action.payload
+
+            if (!state.chats[chatId]) return
+
+            const messages =
+                state.chats[chatId].messages
+
+            const lastMessage =
+                messages[messages.length - 1]
+
+            if (
+                lastMessage &&
+                lastMessage.role === "ai" &&
+                lastMessage.isStreaming
+            ) {
+                lastMessage.status = status
+            }
+        }
+        ,
+        finishStreamingMessage: (state, action) => {
+
+            const {
+                chatId
+            } = action.payload
+
+            if (!state.chats[chatId]) return
+
+            const messages =
+                state.chats[chatId].messages
+
+            const lastMessage =
+                messages[messages.length - 1]
+
+            if (
+                lastMessage &&
+                lastMessage.role === "ai"
+            ) {
+                lastMessage.isStreaming = false
+                lastMessage.status = "complete"
+            }
+        }
+        ,
+
         setChats: (state, action) => {
             state.chats = action.payload
         }
@@ -75,7 +175,18 @@ const chatSlice = createSlice({
 })
 
 
-export const { setChats, setCurrentChatId, setLoading, setError, createNewChat, updateChatTitle, addNewMessage, addMessages } = chatSlice.actions
+export const { setChats,
+    setCurrentChatId,
+    setLoading,
+    setError,
+    createNewChat,
+    updateChatTitle,
+    addNewMessage,
+    addMessages,
+    startStreamingMessage,
+    appendStreamingMessage,
+    updateStreamingStatus,
+    finishStreamingMessage } = chatSlice.actions
 
 export default chatSlice.reducer
 

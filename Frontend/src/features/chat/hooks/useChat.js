@@ -1,6 +1,10 @@
 import { initializeSocketConnection } from "../service/chat.socket"
-import { createChat , generateTitle , sendMessage, getChats, getMessages, deleteChat } from "../service/chat.api"
-import { setChats, setCurrentChatId, setError, setLoading, createNewChat,updateChatTitle , addNewMessage, addMessages } from "../chat.slice"
+import { createChat, generateTitle, sendMessage, getChats, getMessages, deleteChat, streamMessage } from "../service/chat.api"
+import {
+    setChats, setCurrentChatId, setError,
+    setLoading, createNewChat, updateChatTitle,
+    addNewMessage, addMessages, startStreamingMessage,
+    appendStreamingMessage, updateStreamingStatus, finishStreamingMessage } from "../chat.slice"
 import { useDispatch } from "react-redux"
 
 export const useChat = () => {
@@ -47,7 +51,10 @@ export const useChat = () => {
 
     // }
 
-    async function handleSendMessage({ message, chatId }) {
+    async function handleSendMessage({
+    message,
+    chatId
+}) {
 
     dispatch(setLoading(true))
     dispatch(setError(null))
@@ -57,7 +64,7 @@ export const useChat = () => {
         let activeChatId = chatId
 
         // ==========================================
-        // 1. NEW CHAT
+        // 1. CREATE NEW CHAT
         // ==========================================
 
         if (!activeChatId) {
@@ -68,15 +75,16 @@ export const useChat = () => {
 
             activeChatId = newChat._id
 
-            // Immediately add chat to Redux
             dispatch(createNewChat({
                 chatId: newChat._id,
                 title: "New Chat"
             }))
 
-            // Immediately open the new chat
-            dispatch(setCurrentChatId(newChat._id))
+            dispatch(
+                setCurrentChatId(newChat._id)
+            )
         }
+
 
         // ==========================================
         // 2. SHOW USER MESSAGE IMMEDIATELY
@@ -107,11 +115,11 @@ export const useChat = () => {
                     }))
 
                 })
-                .catch((err) => {
+                .catch((error) => {
 
                     console.error(
                         "Title generation failed:",
-                        err
+                        error
                     )
 
                 })
@@ -119,46 +127,107 @@ export const useChat = () => {
 
 
         // ==========================================
-        // 4. GENERATE AI RESPONSE
+        // 4. CREATE EMPTY AI MESSAGE
         // ==========================================
 
-        const data = await sendMessage({
-            message,
+        dispatch(startStreamingMessage({
             chatId: activeChatId
-        })
-
-        const { aiMessage } = data
-
-
-        // ==========================================
-        // 5. ADD AI RESPONSE
-        // ==========================================
-
-        dispatch(addNewMessage({
-            chatId: activeChatId,
-            content: aiMessage.content,
-            role: aiMessage.role
         }))
 
 
-        // Make absolutely sure this chat remains active
-        dispatch(setCurrentChatId(activeChatId))
+        // ==========================================
+        // 5. START STREAM
+        // ==========================================
+
+        await streamMessage({
+
+            message,
+
+            chatId: activeChatId,
+
+            onEvent: (event) => {
+
+                // -------------------------------
+                // STATUS
+                // -------------------------------
+
+                if (event.type === "status") {
+
+                    dispatch(updateStreamingStatus({
+                        chatId: activeChatId,
+                        status: event.status
+                    }))
+
+                    return
+                }
 
 
-    } catch (err) {
+                // -------------------------------
+                // TOKEN
+                // -------------------------------
 
-        console.error(err)
+                if (event.type === "token") {
+
+                    dispatch(
+                        appendStreamingMessage({
+                            chatId: activeChatId,
+                            content: event.content
+                        })
+                    )
+
+                    return
+                }
+
+
+                // -------------------------------
+                // COMPLETE
+                // -------------------------------
+
+                if (event.type === "complete") {
+
+                    dispatch(
+                        finishStreamingMessage({
+                            chatId: activeChatId
+                        })
+                    )
+
+                    return
+                }
+
+
+                // -------------------------------
+                // ERROR
+                // -------------------------------
+
+                if (event.type === "error") {
+
+                    dispatch(setError(
+                        event.message
+                    ))
+                }
+            }
+        })
+
+
+        dispatch(
+            setCurrentChatId(activeChatId)
+        )
+
+    } catch (error) {
+
+        console.error(
+            "Chat streaming error:",
+            error
+        )
 
         dispatch(setError(
-            err.response?.data?.message ||
-            err.message ||
+            error.message ||
             "Something went wrong"
         ))
 
     } finally {
 
         dispatch(setLoading(false))
-
     }
 }
 
