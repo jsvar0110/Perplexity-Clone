@@ -1,92 +1,135 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { ChatMistralAI } from '@langchain/mistralai'
-import { ChatGroq } from "@langchain/groq"
-import { HumanMessage, SystemMessage, AIMessage, tool, createAgent } from "langchain"
-import * as z from "zod"
+import { ChatMistralAI } from "@langchain/mistralai";
+import { ChatGroq } from "@langchain/groq";
+import { ChatCohere } from "@langchain/cohere";
+
+import {
+  HumanMessage,
+  SystemMessage,
+  AIMessage,
+  tool,
+  createAgent,
+} from "langchain";
+import * as z from "zod";
 import { searchInternet } from "./internet.service.js";
 
 const geminiModel = new ChatGoogleGenerativeAI({
-    model: "gemini-2.5-flash-lite",
-    apiKey: process.env.GEMINI_API_KEY
+  model: "gemini-2.5-flash-lite",
+  apiKey: process.env.GEMINI_API_KEY,
+});
+
+const cohereModel = new ChatCohere({
+  model: "command-a-03-2025",
+  apiKey: process.env.COHERE_API_KEY,
 });
 
 const groqModel = new ChatGroq({
-    model: "openai/gpt-oss-120b",
-    apiKey: process.env.GROQ_API_KEY
+  model: "openai/gpt-oss-20b",
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 const mistralModel = new ChatMistralAI({
-    model: "mistral-small-2603",
-    apiKey: process.env.MISTRAL_API_KEY
-})
+  model: "mistral-small-2603",
+  apiKey: process.env.MISTRAL_API_KEY,
+});
 
-const searchInternetTool = tool(
-    searchInternet,
-    {
-        name: "searchInternet",
-        description: "Use this tool to get the latest information from the internet.",
-        schema: z.object({
-            query: z.string().describe("The search query to look up on the internet")
-        })
-    }
-)
+const searchInternetTool = tool(searchInternet, {
+  name: "searchInternet",
+  description: "Use this tool to get the latest information from the internet.",
+  schema: z.object({
+    query: z.string().describe("The search query to look up on the internet"),
+  }),
+});
 
 // Create each agent once at startup, not per-request
 const agents = {
-    groq: createAgent({ model: groqModel, tools: [searchInternetTool] }),
-    gemini: createAgent({ model: geminiModel, tools: [searchInternetTool] }),
-    mistral: createAgent({ model: mistralModel, tools: [searchInternetTool] }),
-}
+  groq: createAgent({ model: groqModel, tools: [searchInternetTool] }),
+  gemini: createAgent({ model: geminiModel, tools: [searchInternetTool] }),
+  mistral: createAgent({ model: mistralModel, tools: [searchInternetTool] }),
+  cohere: createAgent({ model: cohereModel, tools: [searchInternetTool] }),
+};
 
 // Order = priority. First is tried first, falls back down the list.
 const MODEL_CHAIN = [
-    { name: "groq", model: groqModel, agent: agents.groq },
-    { name: "gemini", model: geminiModel, agent: agents.gemini },
-    { name: "mistral", model: mistralModel, agent: agents.mistral },
-]
+  { name: "gemini", model: geminiModel, agent: agents.gemini },
+  { name: "cohere", model: cohereModel, agent: agents.cohere },
+];
+
+const TITLE_CHAIN = [
+  { name: "groq", model: groqModel, agent: agents.groq },
+  { name: "mistral", model: mistralModel, agent: agents.mistral },
+];
 
 function isRetryableError(err) {
-    const status = err?.status || err?.statusCode || err?.error?.code;
+  const status = err?.status || err?.statusCode || err?.error?.code;
 
-    return (
-        status === 429 ||
-        status === 500 ||
-        status === 502 ||
-        status === 503 ||
-        status === 504 ||
-        /429|quota|rate.?limit|overloaded|temporarily unavailable|service unavailable/i
-            .test(err?.message || "")
-    );
+  return (
+    status === 429 ||
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504 ||
+    /429|quota|rate.?limit|overloaded|temporarily unavailable|service unavailable/i.test(
+      err?.message || "",
+    )
+  );
 }
 
-async function runWithFallback(fn) {
-    let lastErr;
-    for (const entry of MODEL_CHAIN) {
-        const start = Date.now();
-        try {
-            const res = await fn(entry);
-            console.log(`[${entry.name}] succeeded in ${Date.now() - start}ms`)
-            return res;
-        } catch (err) {
-            console.warn(`[${entry.name}] failed in ${Date.now() - start}ms`, err.message);
-            lastErr = err;
+async function runWithFallback(fn, chain = MODEL_CHAIN) {
+  let lastErr;
+  for (const entry of chain) {
+    const start = Date.now();
+    try {
+      const res = await fn(entry);
+      console.log(`[${entry.name}] succeeded in ${Date.now() - start}ms`);
+      return res;
+    } catch (err) {
+      console.warn(
+        `[${entry.name}] failed in ${Date.now() - start}ms`,
+        err.message,
+      );
+      lastErr = err;
 
-            if (isRetryableError(err)) continue;
+      if (isRetryableError(err)) continue;
 
-            throw err; // non-retryable error — surface it immediately
-        }
+      throw err; // non-retryable error — surface it immediately
     }
-    throw lastErr; // all models exhausted
+  }
+  throw lastErr; // all models exhausted
+}
+
+async function getStreamWithFallback(langchainMessages, chain = MODEL_CHAIN) {
+  let lastErr;
+  for (const entry of chain) {
+    const start = Date.now();
+    try {
+      const stream = await entry.agent.streamEvents(
+        { messages: langchainMessages },
+        { version: "v2" },
+      );
+      console.log(`[${entry.name}] stream started in ${Date.now() - start}ms`);
+      return { stream, usedModel: entry.name };
+    } catch (err) {
+      console.warn(
+        `[${entry.name}] stream failed to start in ${Date.now() - start}ms`,
+        err.message,
+      );
+      lastErr = err;
+      if (isRetryableError(err)) continue;
+      throw err;
+    }
+  }
+  throw lastErr;
 }
 
 export async function generateResponse(messages) {
-
-    const langchainMessages = [
-        new SystemMessage(`Your name is Veltrix, you are a helpful and precise assistant made by Varad.
-                        Today's date is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
+  const langchainMessages = [
+    new SystemMessage(`Your name is Veltrix, you are a helpful and precise assistant made by Varad.
+                        Today's date is ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}.
 
                         You are capable of reasoning, math, writing, coding, and general problem-solving on your own — 
                         use your own knowledge and reasoning to answer directly whenever possible.
+
 
                         Only use the "searchInternet" tool when the question depends on current events, 
                         real-time data, or information that could have changed after your training 
@@ -102,194 +145,228 @@ export async function generateResponse(messages) {
 
                         If you genuinely don't know something and search didn't help, say so — do not guess.`),
 
-        ...(messages
-            .map(msg => {
-                if (msg.role === "user") return new HumanMessage(msg.content);
-                if (msg.role === "ai") return new AIMessage(msg.content);
-                return null; // unknown role — drop it instead of pushing undefined
-            })
-            .filter(Boolean)
-        )
-    ]
+    ...messages
+      .map((msg) => {
+        if (msg.role === "user") return new HumanMessage(msg.content);
+        if (msg.role === "ai") return new AIMessage(msg.content);
+        return null; // unknown role — drop it instead of pushing undefined
+      })
+      .filter(Boolean),
+  ];
 
-    const response = await runWithFallback(async ({ agent }) => {
-        return await agent.invoke({ messages: langchainMessages })
-    })
+  const response = await runWithFallback(async ({ agent }) => {
+    return await agent.invoke({ messages: langchainMessages });
+  });
 
-    const last = response.messages[response.messages.length - 1];
-    return typeof last.content === "string"
-        ? last.content
-        : last.content.filter(b => b.type === "text").map(b => b.text).join("");
+  const last = response.messages[response.messages.length - 1];
+  return typeof last.content === "string"
+    ? last.content
+    : last.content
+        .filter((b) => b.type === "text")
+        .map((b) => b.text)
+        .join("");
 }
-
 
 export async function streamResponse(messages, sendEvent) {
+  const langchainMessages = [
+    new SystemMessage(`
+                        You are Veltrix, a helpful and precise AI assistant.
 
-    const langchainMessages = [
-        new SystemMessage(`Your name is Veltrix, you are a helpful and precise assistant made by Varad.
+                        Today's date is ${new Date().toLocaleDateString(
+                          "en-US",
+                          {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          },
+                        )}.
+
+                        You are capable of reasoning, mathematics, coding, writing, and general problem-solving.
+
+                        IMPORTANT RESPONSE FORMATTING RULES:
+
+                        1. Use Markdown for your responses.
+
+                        2. For inline mathematics, ALWAYS use:
+                        $...$
+
+                        Example:
+                        The derivative of $x^2$ is $2x$.
+
+                        3. For standalone/display mathematics, ALWAYS use:
+                        $$
+                        ...
+                        $$
+
+                        Example:
+                        $$
+                        f'(x)=1-\\frac{5}{x^2}
+                        $$
+
+                        4. NEVER use square brackets [ ... ] as mathematical delimiters.
+
+                        never wrap the whole solution in one giant \\bigl[...\\bigr] bracket group
+
+                        5. NEVER write mathematical equations like:
+                        $$
+                        [ x^2 + 5x ]
+                        or
+                        [ \\frac{a}{b} ]
+
+                        Instead write:
+                        $$
+                        x^2+5x
+                        $$
+
+                        6. NEVER put mathematical equations inside a Markdown code block unless the user specifically asks for code.
+
+                        7. Use valid LaTeX commands such as:
+                        \\frac
+                        \\sqrt
+                        ^
+                        _
+                        \\sum
+                        \\int
+                        \\alpha
+                        \\beta
+                        \\lim
+
+                        8. Do not escape LaTeX backslashes incorrectly.
+
+                        9. For mathematical solutions, structure the answer clearly using headings, explanations, and properly formatted equations.
+
+                        10. Make sure every opening math delimiter has a matching closing delimiter.
+
                         
-                        Today's date is ${new Date().toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        })}.
 
-                        You are capable of reasoning, math, writing, coding, and general problem-solving on your own.
+                        Only use the searchInternet tool when the question depends on current events, real-time data, or information that could have changed after your training.
+`),
 
-                        Only use the "searchInternet" tool when the question depends on current events,
-                        real-time data, or information that could have changed after your training.
-
-                        If a question mentions words like "recently", "latest", "this week", "today",
-                        or refers to a specific event/person/statement without giving a date,
-                        ALWAYS use searchInternet first.
-
-                        If you genuinely don't know something and search didn't help, say so.
-                        Do not guess.`),
-
-        ...(messages
-            .map(msg => {
-                if (msg.role === "user") {
-                    return new HumanMessage(msg.content)
-                }
-
-                if (msg.role === "ai") {
-                    return new AIMessage(msg.content)
-                }
-
-                return null
-            })
-            .filter(Boolean)
-        )
-    ]
-
-    let fullResponse = ""
-
-    const agent = agents.groq
-
-    sendEvent({
-        type: "status",
-        status: "thinking",
-        message: "Understanding your question..."
-    })
-
-    try {
-
-        const stream = await agent.streamEvents(
-            {
-                messages: langchainMessages
-            },
-            {
-                version: "v2"
-            }
-        )
-
-        for await (const event of stream) {
-
-            // =========================================
-            // TOOL START
-            // =========================================
-
-            if (event.event === "on_tool_start") {
-
-                if (event.name === "searchInternet") {
-
-                    sendEvent({
-                        type: "status",
-                        status: "searching",
-                        message: "Searching the web..."
-                    })
-                }
-            }
-
-
-            // =========================================
-            // TOOL END
-            // =========================================
-
-            if (event.event === "on_tool_end") {
-
-                if (event.name === "searchInternet") {
-
-                    sendEvent({
-                        type: "status",
-                        status: "researching",
-                        message: "Reviewing search results..."
-                    })
-                }
-            }
-
-
-            // =========================================
-            // MODEL STREAM
-            // =========================================
-
-            if (event.event === "on_chat_model_stream") {
-
-                const chunk = event.data?.chunk
-
-                if (!chunk) continue
-
-                let text = ""
-
-                if (typeof chunk.content === "string") {
-
-                    text = chunk.content
-
-                } else if (Array.isArray(chunk.content)) {
-
-                    text = chunk.content
-                        .filter(item => item.type === "text")
-                        .map(item => item.text)
-                        .join("")
-                }
-
-                if (!text) continue
-
-                fullResponse += text
-
-                sendEvent({
-                    type: "token",
-                    content: text
-                })
-            }
+    ...messages
+      .map((msg) => {
+        if (msg.role === "user") {
+          return new HumanMessage(msg.content);
         }
 
+        if (msg.role === "ai") {
+          return new AIMessage(msg.content);
+        }
+
+        return null;
+      })
+      .filter(Boolean),
+  ];
+
+  let fullResponse = "";
+
+  // const agent = agents.gemini; // Use the first agent in the chain for streaming
+
+  sendEvent({
+    type: "status",
+    status: "thinking",
+    message: "Understanding your question...",
+  });
+
+  try {
+    const { stream ,usedModel } = await getStreamWithFallback(langchainMessages);
+    
+      // console.log(`[streamResponse]  using model: ${usedModel}`);
+
+    for await (const event of stream) {
+
+      //  console.log("[EVENT]", usedModel, event.event, event.name)
+      // =========================================
+      // TOOL START
+      // =========================================
+
+      if (event.event === "on_tool_start") {
+        if (event.name === "searchInternet") {
+          sendEvent({
+            type: "status",
+            status: "searching",
+            message: "Searching the web...",
+          });
+        }
+      }
+
+      // =========================================
+      // TOOL END
+      // =========================================
+
+      if (event.event === "on_tool_end") {
+        if (event.name === "searchInternet") {
+          sendEvent({
+            type: "status",
+            status: "researching",
+            message: "Reviewing search results...",
+          });
+        }
+      }
+
+      // =========================================
+      // MODEL STREAM
+      // =========================================
+
+      if (event.event === "on_chat_model_stream") {
+        const chunk = event.data?.chunk;
+
+        if (!chunk) continue;
+
+        console.log("[RAW CHUNK]", usedModel, JSON.stringify(chunk));
+
+        let text = "";
+
+        if (typeof chunk.content === "string") {
+          text = chunk.content;
+        } else if (Array.isArray(chunk.content)) {
+          text = chunk.content
+            .filter((item) => item.type === "text")
+            .map((item) => item.text)
+            .join("");
+        }
+
+        if (!text) continue;
+
+        fullResponse += text;
+
         sendEvent({
-            type: "complete"
-        })
-
-        return fullResponse
-
-    } catch (error) {
-
-        console.error("Streaming AI error:", error)
-
-        sendEvent({
-            type: "error",
-            message: "Something went wrong while generating the response."
-        })
-
-        throw error
+          type: "token",
+          content: text,
+        });
+      }
     }
+
+    sendEvent({
+      type: "complete",
+    });
+
+    return fullResponse;
+  } catch (error) {
+    console.error("Streaming AI error:", error);
+
+    sendEvent({
+      type: "error",
+      message: "Something went wrong while generating the response.",
+    });
+
+    throw error;
+  }
 }
 
-
-
 export async function generateChatTitle(message) {
-
-    const response = await runWithFallback(async ({ model }) => {
-        return await model.invoke([
-            new SystemMessage(`You generate short chat titles.
+  const response = await runWithFallback(async ({ model }) => {
+    return await model.invoke([
+      new SystemMessage(`You generate short chat titles.
 
                 Rules:
                 - Output ONLY the title text, nothing else.
                 - No quotes, no punctuation at the end, no preamble like "Here is your title:".
                 - Maximum 4 words.
                 - Must clearly reflect the topic of the user's message.`),
-            new HumanMessage(`First message: "${message}"`)
-        ])
-    })
+      new HumanMessage(`First message: "${message}"`),
+    ]);
+  }, TITLE_CHAIN);
 
-    return response.content
+  return response.content;
 }
