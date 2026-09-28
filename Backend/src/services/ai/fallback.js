@@ -1,9 +1,3 @@
-
-
-
-
-
-
 export function isRetryableError(err) {
   const status = err?.status || err?.statusCode || err?.error?.code;
 
@@ -30,10 +24,8 @@ export async function runWithFallback(fn, chain) {
       console.log(`[${entry.name}] succeeded in ${Date.now() - start}ms`);
 
       return result;
-
     } catch (err) {
-      
-        console.warn(
+      console.warn(
         `[${entry.name}] failed in ${Date.now() - start}ms`,
         err.message,
       );
@@ -48,13 +40,16 @@ export async function runWithFallback(fn, chain) {
   throw lastErr; // all models exhausted
 }
 
-
-export async function getStreamWithFallback( langchainMessages, chain ) {
-
+export async function* getStreamWithFallback(langchainMessages, chain) {
   let lastErr;
+
+  let isFirstAttempt = true;
 
   for (const entry of chain) {
     const start = Date.now();
+
+    yield { type: "restart", usedModel: entry.name, isFirstAttempt };
+    isFirstAttempt = false;
 
     try {
       const stream = entry.agent.streamEvents(
@@ -63,39 +58,31 @@ export async function getStreamWithFallback( langchainMessages, chain ) {
         },
         {
           version: "v2",
-        }
+        },
       );
 
-      const iterator = stream[Symbol.asyncIterator]();
+      let gotFirstChunk = false;
 
-      // Force early errors to surface
-      const first = await iterator.next();
+      for await (const event of stream) {
+        if (!gotFirstChunk) {
+          gotFirstChunk = true;
+          console.log(
+            `[${entry.name}] stream started in ${Date.now() - start}ms`,
+          );
+        }
+
+        yield { type: "event", usedModel: entry.name, event };
+      }
 
       console.log(
-        `[${entry.name}] stream started in ${Date.now() - start}ms`
+        `[${entry.name}] stream completed in ${Date.now() - start}ms`,
       );
 
-      return {
-        usedModel: entry.name,
-
-        async *stream() {
-          if (!first.done) {
-            yield first.value;
-          }
-
-          while (true) {
-            const next = await iterator.next();
-
-            if (next.done) return;
-
-            yield next.value;
-          }
-        },
-      };
+      return;
     } catch (err) {
       console.warn(
         `[${entry.name}] stream failed in ${Date.now() - start}ms`,
-        err.message
+        err.message,
       );
 
       lastErr = err;
@@ -109,7 +96,4 @@ export async function getStreamWithFallback( langchainMessages, chain ) {
   }
 
   throw lastErr;
-
-
-
 }

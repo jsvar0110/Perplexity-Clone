@@ -1,197 +1,163 @@
 import { createSlice, current } from "@reduxjs/toolkit";
 
 const chatSlice = createSlice({
-    name: "chat",
+  name: "chat",
 
-    initialState: {
-        chats: {},
-        currentChatId: null,
-        isLoading: false,
-        error: null,
+  initialState: {
+    chats: {},
+    currentChatId: null,
+    isLoading: false,
+    error: null,
+  },
+  reducers: {
+    createNewChat: (state, action) => {
+      const { chatId, title } = action.payload;
+
+      state.chats[chatId] = {
+        id: chatId,
+        title,
+        messages: [],
+        lastUpdated: new Date().toISOString(),
+      };
+    },
+    updateChatTitle: (state, action) => {
+      const { chatId, title } = action.payload;
+
+      if (state.chats[chatId]) {
+        state.chats[chatId].title = title;
+        state.chats[chatId].lastUpdated = new Date().toISOString();
+      }
+    },
+    addNewMessage: (state, action) => {
+      const { chatId, content, role } = action.payload;
+
+      if (!state.chats[chatId]) return;
+
+      state.chats[chatId].messages.push({
+        content,
+        role,
+      });
+
+      state.chats[chatId].lastUpdated = new Date().toISOString();
+    },
+    addMessages: (state, action) => {
+      const { chatId, messages } = action.payload;
+      state.chats[chatId].messages.push(...messages);
+    },
+    startStreamingMessage: (state, action) => {
+      const { chatId, content = "" } = action.payload;
+
+      if (!state.chats[chatId]) return;
+
+      state.chats[chatId].messages.push({
+        content,
+        role: "ai",
+        isStreaming: true,
+        status: "thinking",
+      });
+
+      state.chats[chatId].lastUpdated = new Date().toISOString();
+    },
+    appendStreamingMessage: (state, action) => {
+      const { chatId, content } = action.payload;
+
+      if (!state.chats[chatId]) return;
+
+      const messages = state.chats[chatId].messages;
+
+      const lastMessage = messages[messages.length - 1];
+
+      if (
+        !lastMessage ||
+        lastMessage.role !== "ai" ||
+        !lastMessage.isStreaming
+      ) {
+        return;
+      }
+
+      lastMessage.content += content;
+
+      lastMessage.status = "writing";
+
+      state.chats[chatId].lastUpdated = new Date().toISOString();
     }
     ,
-    reducers: {
+    resetStreamingMessage: (state, action) => {
+      const { chatId } = action.payload;
 
-        createNewChat: (state, action) => {
-            const { chatId, title } = action.payload
+      if (!state.chats[chatId]) return;
 
-            state.chats[chatId] = {
-                id: chatId,
-                title,
-                messages: [],
-                lastUpdated: new Date().toISOString(),
-            }
-        }
-        ,
-        updateChatTitle: (state, action) => {
+      const messages = state.chats[chatId].messages;
 
-            const { chatId, title } = action.payload
+      const lastMessage = messages[messages.length - 1];
 
-            if (state.chats[chatId]) {
-                state.chats[chatId].title = title
-                state.chats[chatId].lastUpdated =
-                    new Date().toISOString()
-            }
-        }
-        ,
-        addNewMessage: (state, action) => {
-            const { chatId, content, role } = action.payload
+      if (lastMessage && lastMessage.role === "ai" && lastMessage.isStreaming) {
 
-            if (!state.chats[chatId]) return
+        lastMessage.content = "";
+        lastMessage.status = "thinking";
 
-            state.chats[chatId].messages.push({
-                content,
-                role
-            })
-
-            state.chats[chatId].lastUpdated =
-                new Date().toISOString()
-        }
-        ,
-        addMessages: (state, action) => {
-            const { chatId, messages } = action.payload
-            state.chats[chatId].messages.push(...messages)
-        }
-        ,
-
-        startStreamingMessage: (state, action) => {
-
-            const {
-                chatId,
-                content = ""
-            } = action.payload
-
-            if (!state.chats[chatId]) return
-
-            state.chats[chatId].messages.push({
-                content,
-                role: "ai",
-                isStreaming: true,
-                status: "thinking"
-            })
-
-            state.chats[chatId].lastUpdated =
-                new Date().toISOString()
-        }
-        ,
-        appendStreamingMessage: (state, action) => {
-
-            const {
-                chatId,
-                content
-            } = action.payload
-
-            if (!state.chats[chatId]) return
-
-            const messages =
-                state.chats[chatId].messages
-
-            const lastMessage =
-                messages[messages.length - 1]
-
-            if (
-                !lastMessage ||
-                lastMessage.role !== "ai" ||
-                !lastMessage.isStreaming
-            ) {
-                return
-            }
-
-            lastMessage.content += content
-
-            lastMessage.status = "writing"
-
-            state.chats[chatId].lastUpdated =
-                new Date().toISOString()
-        }
-        ,
-        updateStreamingStatus: (state, action) => {
-
-            const {
-                chatId,
-                status
-            } = action.payload
-
-            if (!state.chats[chatId]) return
-
-            const messages =
-                state.chats[chatId].messages
-
-            const lastMessage =
-                messages[messages.length - 1]
-
-            if (
-                lastMessage &&
-                lastMessage.role === "ai" &&
-                lastMessage.isStreaming
-            ) {
-                lastMessage.status = status
-            }
-        }
-        ,
-        finishStreamingMessage: (state, action) => {
-
-            const {
-                chatId
-            } = action.payload
-
-            if (!state.chats[chatId]) return
-
-            const messages =
-                state.chats[chatId].messages
-
-            const lastMessage =
-                messages[messages.length - 1]
-
-            if (
-                lastMessage &&
-                lastMessage.role === "ai"
-            ) {
-                lastMessage.isStreaming = false
-                lastMessage.status = "complete"
-            }
-        }
-        ,
-
-        setChats: (state, action) => {
-            state.chats = action.payload
-        }
-        ,
-        setCurrentChatId: (state, action) => {
-            state.currentChatId = action.payload
-        }
-        ,
-        setLoading: (state, action) => {
-            state.isLoading = action.payload
-        }
-        ,
-        setError: (state, action) => {
-            state.error = action.payload
-        }
+      }
     }
+    ,
+    updateStreamingStatus: (state, action) => {
+      const { chatId, status } = action.payload;
 
+      if (!state.chats[chatId]) return;
 
+      const messages = state.chats[chatId].messages;
 
-})
+      const lastMessage = messages[messages.length - 1];
 
+      if (lastMessage && lastMessage.role === "ai" && lastMessage.isStreaming) {
+        lastMessage.status = status;
+      }
+    },
+    finishStreamingMessage: (state, action) => {
+      const { chatId } = action.payload;
 
-export const { setChats,
-    setCurrentChatId,
-    setLoading,
-    setError,
-    createNewChat,
-    updateChatTitle,
-    addNewMessage,
-    addMessages,
-    startStreamingMessage,
-    appendStreamingMessage,
-    updateStreamingStatus,
-    finishStreamingMessage } = chatSlice.actions
+      if (!state.chats[chatId]) return;
 
-export default chatSlice.reducer
+      const messages = state.chats[chatId].messages;
 
+      const lastMessage = messages[messages.length - 1];
 
+      if (lastMessage && lastMessage.role === "ai") {
+        lastMessage.isStreaming = false;
+        lastMessage.status = "complete";
+      }
+    },
+    setChats: (state, action) => {
+      state.chats = action.payload;
+    },
+    setCurrentChatId: (state, action) => {
+      state.currentChatId = action.payload;
+    },
+    setLoading: (state, action) => {
+      state.isLoading = action.payload;
+    },
+    setError: (state, action) => {
+      state.error = action.payload;
+    },
+  },
+});
 
+export const {
+  setChats,
+  setCurrentChatId,
+  setLoading,
+  setError,
+  createNewChat,
+  updateChatTitle,
+  addNewMessage,
+  addMessages,
+  startStreamingMessage,
+  appendStreamingMessage,
+  resetStreamingMessage,
+  updateStreamingStatus,
+  finishStreamingMessage,
+} = chatSlice.actions;
+
+export default chatSlice.reducer;
 
 // chats = {
 //     "docker and AWS": {

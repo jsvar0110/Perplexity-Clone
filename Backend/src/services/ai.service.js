@@ -40,7 +40,7 @@ export async function generateResponse(messages) {
 export async function streamResponse(messages, sendEvent) {
   const langchainMessages = [
     new SystemMessage(getStreamResponse()),
-    ...convertMessages(messages)
+    ...convertMessages(messages),
   ];
 
   let fullResponse = "";
@@ -54,56 +54,62 @@ export async function streamResponse(messages, sendEvent) {
   });
 
   try {
-    const { stream, usedModel } =
-      await getStreamWithFallback(langchainMessages ,MODEL_CHAIN);
+    for await (const item of getStreamWithFallback(
+      langchainMessages,
+      MODEL_CHAIN,
+    )) {
+      // MODEL RESTART / FALLBACK
 
-    console.log(`[streamResponse]  using model: ${usedModel}`);
+      if (item.type === "restart") {
+        if (!item.isFirstAttempt) {
+          // if previous model died mid-response -wipe  partial text is already rendered
+          fullResponse = "";
+          sendEvent({ type: "restart" });
+          sendEvent({
+            type: "status",
+            status: "thinking",
+            message: "Retrying  with different model...",
+          });
+        }
 
-    for await (const event of stream()) {
-      console.log("[EVENT]", usedModel, event.event, event.name);
-      
-      handleToolEvent(
-        event , 
-        sendEvent
-      )
+        continue;
+      }
 
+      const { usedModel, event } = item;
 
-//        // =========================================
-//   // TOOL START
-//   // =========================================
+      handleToolEvent(event, sendEvent);
 
-//   if (event.event === "on_tool_start") {
-//     if (event.name === "searchInternet") {
-//       sendEvent({
-//         type: "status",
-//         status: "searching",
-//         message: "Searching the web...",
-//       });
-//     }
-//   }
+      //        // =========================================
+      //   // TOOL START
+      //   // =========================================
 
-//   // =========================================
-//   // TOOL END
-//   // =========================================
+      //   if (event.event === "on_tool_start") {
+      //     if (event.name === "searchInternet") {
+      //       sendEvent({
+      //         type: "status",
+      //         status: "searching",
+      //         message: "Searching the web...",
+      //       });
+      //     }
+      //   }
 
-//   if (event.event === "on_tool_end") {
-//     if (event.name === "searchInternet") {
-//       sendEvent({
-//         type: "status",
-//         status: "researching",
-//         message: "Reviewing search results...",
-//       });
-//     }
-//   }
-// }
+      //   // =========================================
+      //   // TOOL END
+      //   // =========================================
 
+      //   if (event.event === "on_tool_end") {
+      //     if (event.name === "searchInternet") {
+      //       sendEvent({
+      //         type: "status",
+      //         status: "researching",
+      //         message: "Reviewing search results...",
+      //       });
+      //     }
+      //   }
+      // }
 
       if (event.event === "on_chat_model_stream") {
-        
-        const text = getStreamText (
-          event ,
-          usedModel
-        )
+        const text = getStreamText(event, usedModel);
 
         if (!text) continue;
 
