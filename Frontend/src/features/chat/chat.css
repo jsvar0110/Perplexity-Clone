@@ -360,6 +360,8 @@ html, body { overflow: hidden; height: 100%; }
   transition: all .18s;
 }
 .vx-icon-btn:hover { background: rgba(255,255,255,.07); color: #e4e1ed; }
+.vx-mic-active { background: rgba(239,68,68,.15); color: #ef4444; animation: vx-mic-pulse 1.2s ease-in-out infinite; }
+@keyframes vx-mic-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 
 
 /* ═══════════════════════════════════════

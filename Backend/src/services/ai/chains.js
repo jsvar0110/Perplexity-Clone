@@ -16,13 +16,13 @@ export const MODEL_CHAIN = [
 
 export const TITLE_CHAIN = [
   {
-    name: "groq",
-    model: models.groq,
-    agent: agents.groq,
-  },
-  {
     name: "cohere",
     model: models.cohere,
     agent: agents.cohere,
+  },
+  {
+    name: "groq",
+    model: models.groq,
+    agent: agents.groq,
   },
 ];

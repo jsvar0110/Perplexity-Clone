@@ -1,0 +1,27 @@
+import axios from "axios"
+
+const api = axios.create({
+    baseURL: "http://localhost:3000",
+    withCredentials: true
+})
+
+export const transcribeAudio = async (audioBlob) => {
+    const formData = new FormData()
+    formData.append("audio", audioBlob, "recording.webm")
+
+    const response = await api.post("/api/audio/transcribe", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+    })
+
+    return response.data
+}
+
+export const fetchSpeech = async (text) => {
+    const response = await api.post(
+        "/api/audio/speech",
+        { text },
+        { responseType: "blob" }
+    )
+
+    return URL.createObjectURL(response.data)
+}

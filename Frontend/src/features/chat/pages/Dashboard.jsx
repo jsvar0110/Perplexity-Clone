@@ -6,6 +6,7 @@ import 'katex/dist/katex.min.css';
 import ReactMarkdown from 'react-markdown'
 import { useSelector, useDispatch } from 'react-redux'
 import { useChat } from '../hooks/useChat'
+import { useAudio } from '../hooks/useAudio'
 import { setCurrentChatId } from '../chat.slice'
 import remarkGfm from 'remark-gfm'
 import '../chat.css'
@@ -89,6 +90,7 @@ const AIActivity = ({ status }) => {
 
 const Dashboard = () => {
   const chat = useChat()
+  const audio = useAudio()
   // const [activeChat, setActiveChat] = useState(null)
   const [chatInput, setChatInput] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -141,6 +143,17 @@ const Dashboard = () => {
   }
 
   const closeSidebar = () => setSidebarOpen(false)
+
+  const handleMicToggle = async () => {
+    if (audio.isRecording) {
+      const text = await audio.stopRecording()
+      if (text?.trim()) {
+        chat.handleSendMessage({ message: text.trim(), chatId: currentChatId })
+      }
+      return
+    }
+    await audio.startRecording()
+  }
 
   const hasMessages = currentChatId && chats[currentChatId]?.messages?.length > 0
 
@@ -357,8 +370,16 @@ const Dashboard = () => {
                     </button>
                   </div>
                   <div className="vx-composer-right">
-                    <button className="vx-icon-btn">
-                      <span className="material-symbols-outlined" style={{ fontSize: 19 }}>mic</span>
+                    <button
+                      type="button"
+                      className={`vx-icon-btn ${audio.isRecording ? 'vx-mic-active' : ''}`}
+                      onClick={handleMicToggle}
+                      title={audio.isRecording ? 'Stop recording' : 'Ask by voice'}
+                      disabled={audio.isTranscribing}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 19 }}>
+                        {audio.isTranscribing ? 'progress_activity' : audio.isRecording ? 'stop_circle' : 'mic'}
+                      </span>
                     </button>
                     <button
                       className="vx-send-btn"
@@ -460,11 +481,34 @@ const Dashboard = () => {
 
                         {/* Action dock */}
                         <div className="vx-dock">
+                          <button
+                            className="vx-icon-btn"
+                            title={audio.speakingMsgId === idx ? 'Stop' : 'Listen'}
+                            onClick={() => audio.playText(msg.content, idx)}
+                            disabled={!msg.content || msg.isStreaming}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                              {audio.speakingMsgId === idx ? 'stop_circle' : 'volume_up'}
+                            </span>
+                          </button>
                           {['content_copy', 'refresh', 'thumb_up', 'thumb_down'].map(icon => (
                             <button key={icon} className="vx-icon-btn" title={icon}>
                               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{icon}</span>
                             </button>
                           ))}
+
+                          {audio.isGenerating && audio.speakingMsgId === idx && (
+                            <span
+                              className="flex items-center gap-1 text-xs"
+                              style={{ marginLeft: 'auto', opacity: 0.8 }}
+                            >
+                              <span className="material-symbols-outlined vx-spin" style={{ fontSize: 14 }}>
+                                progress_activity
+                              </span>
+                              Generating audio… {audio.countdown}s
+                            </span>
+                          )}
+
                         </div>
                       </div>
                     )}
@@ -486,8 +530,16 @@ const Dashboard = () => {
                     onChange={e => setChatInput(e.target.value)}
                     placeholder="Type a follow-up message…"
                   />
-                  <button type="button" className="vx-icon-btn">
-                    <span className="material-symbols-outlined" style={{ fontSize: 20 }}>mic</span>
+                  <button
+                    type="button"
+                    className={`vx-icon-btn ${audio.isRecording ? 'vx-mic-active' : ''}`}
+                    onClick={handleMicToggle}
+                    title={audio.isRecording ? 'Stop recording' : 'Ask by voice'}
+                    disabled={audio.isTranscribing}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                      {audio.isTranscribing ? 'progress_activity' : audio.isRecording ? 'stop_circle' : 'mic'}
+                    </span>
                   </button>
                   <button
                     type="submit"
