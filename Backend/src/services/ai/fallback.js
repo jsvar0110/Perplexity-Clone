@@ -3,6 +3,7 @@ export function isRetryableError(err) {
 
   return (
     status === 429 ||
+    status === 402 ||
     status === 500 ||
     status === 502 ||
     status === 503 ||

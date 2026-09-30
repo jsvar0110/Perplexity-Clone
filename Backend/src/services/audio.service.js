@@ -1,5 +1,5 @@
 // STT: Groq Whisper Large V3 Turbo      (key: GROQ_API_KEY)
-// TTS: Gemini 2.5 Flash Preview TTS -> ElevenLabs eleven_flash_v2_5 (fallback)
+// TTS: Gemini 2.5 Flash Preview TTS -> ElevenLabs eleven_flash_v2_5 -> Hume Octave -> Fish Audio (fallbacks)
 import { runWithFallback } from "./ai/fallback.js";
 
 const GROQ_AUDIO_KEY = process.env.GROQ_API_KEY;
@@ -10,6 +10,9 @@ const GEMINI_TTS_URL =
 
 const ELEVENLABS_TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech";
 // const ELEVENLABS_DEFAULT_VOICE_ID = ""; // 
+
+const HUME_TTS_URL = "https://api.hume.ai/v0/tts/file";
+const FISH_TTS_URL = "https://api.fish.audio/v1/tts";
 
 export async function transcribeAudio(buffer, filename = "audio.webm", mimetype = "audio/webm") {
   const form = new FormData();
@@ -109,6 +112,54 @@ async function synthesizeWithElevenLabs(text) {
   return { buffer: Buffer.from(arrayBuffer), mimeType: "audio/mpeg" };
 }
 
+
+async function synthesizeWithHume(text) {
+  const response = await fetch(HUME_TTS_URL, {
+    method: "POST",
+    headers: {
+      "X-Hume-Api-Key": process.env.HUME_API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      utterances: [
+        { text, voice: { id: process.env.HUME_VOICE_ID, provider: "HUME_AI" } },
+      ],
+      format: { type: "mp3" },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = new Error(`Hume TTS failed: ${response.status} ${await response.text()}`);
+    err.status = response.status;
+    throw err;
+  }
+
+  return { buffer: Buffer.from(await response.arrayBuffer()), mimeType: "audio/mpeg" };
+}
+
+async function synthesizeWithFish(text) {
+  const response = await fetch(FISH_TTS_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.FA_API_KEY}`,
+      "Content-Type": "application/json",
+      model: "s2.1-pro-free",
+    },
+    body: JSON.stringify({
+      text,
+      reference_id: process.env.FA_VOICE_ID,
+      format: "mp3",
+    }),
+  });
+
+  if (!response.ok) {
+    const err = new Error(`Fish Audio TTS failed: ${response.status} ${await response.text()}`);
+    err.status = response.status;
+    throw err;
+  }
+
+  return { buffer: Buffer.from(await response.arrayBuffer()), mimeType: "audio/mpeg" };
+}
 // Tries Gemini first; on a retryable failure (quota/rate-limit/5xx — see
 // isRetryableError in fallback.js) falls through to ElevenLabs. Each new
 // call starts back at Gemini, so a later request "falls back to Gemini"
@@ -116,6 +167,8 @@ async function synthesizeWithElevenLabs(text) {
 const ttsChain = [
   { name: "gemini-2.5-flash-preview-tts", synth: (text, voiceName) => synthesizeWithGemini(text, voiceName) },
   { name: "eleven_flash_v2_5", synth: (text) => synthesizeWithElevenLabs(text) },
+  { name: "hume-octave", synth: (text) => synthesizeWithHume(text) },
+  { name: "fish-audio", synth: (text) => synthesizeWithFish(text) },
 ];
 
 export async function synthesizeSpeech(text, voiceName = "Kore") {
