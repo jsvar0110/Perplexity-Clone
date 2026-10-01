@@ -23,4 +23,8 @@ export const agents = {
     model: models.cohere,
     tools: [searchInternetTool],
   }),
+  cloudFlare : createAgent({
+    model : models.cloudFlare,
+    tools: [searchInternetTool]
+  }) 
 };
