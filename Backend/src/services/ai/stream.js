@@ -62,11 +62,11 @@ export function getStreamText(event, usedModel) {
     return null;
   }
 
-  console.log(
-    "[RAW CHUNK]",
-    usedModel,
-    JSON.stringify(chunk)
-  );
+  // console.log(
+  //   "[RAW CHUNK]",
+  //   usedModel,
+  //   JSON.stringify(chunk)
+  // );
 
   let text = "";
 
