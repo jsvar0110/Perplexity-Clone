@@ -3,14 +3,14 @@ import { agents } from "./agents.js";
 
 export const MODEL_CHAIN = [
   {
-    name: "gemini",
-    model: models.gemini,
-    agent: agents.gemini,
-  },
-  {
     name: "openRouter",
     model: models.openRouter,
     agent: agents.openRouter,
+  },
+  {
+    name: "gemini",
+    model: models.gemini,
+    agent: agents.gemini,
   },
   {
     name : "cloudFlare" ,

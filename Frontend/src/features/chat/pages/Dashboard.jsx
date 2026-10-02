@@ -156,6 +156,7 @@ const Dashboard = () => {
   }
 
   const hasMessages = currentChatId && chats[currentChatId]?.messages?.length > 0
+  const isAudioPlaying = audio.speakingMsgId !== null && !audio.isGenerating
 
   // Determine time of day for greeting
   const hour = new Date().getHours()
@@ -507,6 +508,14 @@ const Dashboard = () => {
                               </span>
                               Generating audio… {audio.countdown}s
                             </span>
+                          )}
+
+                          {audio.speakingMsgId === idx && !audio.isGenerating && (
+                            <img
+                              src="./audio-active-2.webp"
+                              alt="Audio playing"
+                              className="vx-audio-gif"
+                            />
                           )}
 
                         </div>

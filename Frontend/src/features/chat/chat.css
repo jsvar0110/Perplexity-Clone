@@ -773,6 +773,7 @@ html, body { overflow: hidden; height: 100%; }
   bottom: 0;
 }
 .vx-float-inner {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -789,6 +790,16 @@ html, body { overflow: hidden; height: 100%; }
   border-color: rgba(139,92,246,.6);
   box-shadow: 0 0 0 2px rgba(139,92,246,.1), 0 8px 32px rgba(0,0,0,.4);
 }
+
+
+.vx-audio-gif {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+}
+
+
 .vx-input {
   flex: 1;
   background: transparent;
