@@ -99,6 +99,8 @@ const Dashboard = () => {
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
   const [selectedFile, setSelectedFile] = useState(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragCounterRef = useRef(0)
   const [copiedIdx, setCopiedIdx] = useState(null)
 
   const chats = useSelector((state) => state.chat.chats)
@@ -157,6 +159,50 @@ const Dashboard = () => {
   const clearFile = () => {
     setSelectedFile(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  // ── Drag-and-drop handlers ──
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounterRef.current += 1
+    if (dragCounterRef.current === 1) setIsDragging(true)
+  }
+
+  const handleDragLeave = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounterRef.current -= 1
+    if (dragCounterRef.current === 0) setIsDragging(false)
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounterRef.current = 0
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (!file) return
+    const allowed = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'text/markdown',
+      'text/csv',
+      'application/json',
+      'image/png',
+      'image/jpeg',
+      'image/webp',
+    ]
+    if (!allowed.includes(file.type)) {
+      alert(`Unsupported file type: ${file.type || file.name}`)
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File is too large (max 10 MB)')
+      return
+    }
+    setSelectedFile(file)
   }
 
   const handleCopy = async (text, idx) => {
@@ -380,7 +426,7 @@ const Dashboard = () => {
           {!hasMessages ? (
 
             /* ───── EMPTY / WELCOME STATE ───── */
-            <div className="vx-welcome">fileInputRef
+            <div className="vx-welcome">
 
               {/* Orb */}
               <div className="vx-orb-wrap vu0">
@@ -408,7 +454,20 @@ const Dashboard = () => {
               </p>
 
               {/* Composer */}
-              <div className="vx-composer vu2" style={{ maxWidth: 700 }}>
+              <div
+                className={`vx-composer vu2${isDragging ? ' vx-drag-over' : ''}`}
+                style={{ maxWidth: 700, position: 'relative' }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {isDragging && (
+                  <div className="vx-drop-overlay">
+                    <span className="material-symbols-outlined" style={{ fontSize: 36 }}>upload_file</span>
+                    <span>Drop your file here</span>
+                  </div>
+                )}
+                {filePreview}
                 <textarea
                   ref={textareaRef}
                   className="vx-textarea"
@@ -424,7 +483,6 @@ const Dashboard = () => {
                   }}
                 />
                 {fileInput}
-                {filePreview}
                 <div className="vx-composer-actions">
                   <div className="vx-composer-left">
                     <button type="button" className="vx-ghost-btn" onClick={() => fileInputRef.current?.click()}>
@@ -611,7 +669,19 @@ const Dashboard = () => {
               </div>
 
               {/* Floating input bar */}
-              <div className="vx-float-bar" style={{ alignSelf: 'center' }}>
+              <div
+                className={`vx-float-bar${isDragging ? ' vx-drag-over' : ''}`}
+                style={{ alignSelf: 'center', position: 'relative' }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {isDragging && (
+                  <div className="vx-drop-overlay">
+                    <span className="material-symbols-outlined" style={{ fontSize: 28 }}>upload_file</span>
+                    <span>Drop your file here</span>
+                  </div>
+                )}
                 {fileInput}
                 {filePreview}
                 <form onSubmit={handleSubmit} className="vx-float-inner">
