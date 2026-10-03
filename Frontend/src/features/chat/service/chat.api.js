@@ -12,7 +12,17 @@ export const createChat = async () => {
 }
 
 
-export const streamMessage = async ({ message ,chatId ,onEvent }) => {
+export const streamMessage = async ({ message ,chatId , file ,onEvent }) => {
+
+    const formData = new FormData()
+
+    formData.append("message" , message)
+    formData.append("chat" , chatId )
+
+    if (file) {
+        formData.append("file" , file)
+    }
+
 
     const response = await fetch(
         "http://localhost:3000/api/chats/message/stream",
@@ -21,14 +31,7 @@ export const streamMessage = async ({ message ,chatId ,onEvent }) => {
 
             credentials: "include",
 
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-                message,
-                chat: chatId
-            })
+            body : formData
         }
     )
 
@@ -39,9 +42,8 @@ export const streamMessage = async ({ message ,chatId ,onEvent }) => {
     }
 
     if (!response.body) {
-        throw new Error(
-            "Streaming is not supported by this browser."
-        )
+        const err = await response.json().catch(() => null)
+        throw new Error(err?.message || `Streaming request failed: ${response.status}`)
     }
 
     const reader = response.body.getReader()

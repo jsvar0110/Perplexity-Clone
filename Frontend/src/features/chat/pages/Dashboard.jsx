@@ -97,6 +97,9 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const chatBottomRef = useRef(null)
   const textareaRef = useRef(null)
+  const fileInputRef = useRef(null)
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [copiedIdx, setCopiedIdx] = useState(null)
 
   const chats = useSelector((state) => state.chat.chats)
   const currentChatId = useSelector((state) => state.chat.currentChatId)
@@ -131,11 +134,68 @@ const Dashboard = () => {
   const handleSubmit = (e) => {
     e?.preventDefault()
     const trimmed = chatInput.trim()
-    if (!trimmed) return
-    chat.handleSendMessage({ message: trimmed, chatId: currentChatId })
+    if (!trimmed && !selectedFile) return
+    chat.handleSendMessage({
+      message: trimmed || 'Please read the attached file.',
+      chatId: currentChatId,
+      file: selectedFile,
+    })
+
     setChatInput('')
+
+    clearFile()
+    setSelectedFile(null)
+
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+
     textareaRef.current?.focus()
   }
+
+  const clearFile = () => {
+    setSelectedFile(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleCopy = async (text, idx) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedIdx(idx)
+      setTimeout(() => setCopiedIdx(null), 1500)
+    } catch (err) {
+      console.error('Copy failed:', err)
+    }
+  }
+
+  // shared by both composers (only one is mounted at a time)
+  const fileInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      hidden
+      accept=".pdf,.docx,.txt,.md,.csv,.json,image/png,image/jpeg,image/webp"
+      onChange={(e) => {
+        const f = e.target.files?.[0]
+        if (!f) return
+        if (f.size > 10 * 1024 * 1024) {
+          alert('File is too large (max 10 MB)')
+          e.target.value = ''
+          return
+        }
+        setSelectedFile(f)
+      }}
+    />
+  )
+
+  const filePreview = selectedFile && (
+    <div className="vx-file-preview">
+      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>description</span>
+      <span className="vx-file-name">{selectedFile.name}</span>
+      <button type="button" onClick={clearFile}>×</button>
+    </div>
+  )
 
   const openChat = (chatId) => {
     chat.handleOpenChat(chatId, chats)
@@ -320,7 +380,7 @@ const Dashboard = () => {
           {!hasMessages ? (
 
             /* ───── EMPTY / WELCOME STATE ───── */
-            <div className="vx-welcome">
+            <div className="vx-welcome">fileInputRef
 
               {/* Orb */}
               <div className="vx-orb-wrap vu0">
@@ -363,12 +423,27 @@ const Dashboard = () => {
                     }
                   }}
                 />
+                {fileInput}
+                {filePreview}
                 <div className="vx-composer-actions">
                   <div className="vx-composer-left">
-                    <button className="vx-ghost-btn">
+                    <button type="button" className="vx-ghost-btn" onClick={() => fileInputRef.current?.click()}>
                       <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
-                      <span>Attach</span>
+                      <span>{selectedFile ? 'Change' : 'Attach'}</span>
                     </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      hidden
+                      accept=".pdf,.docx,.txt,.md,.csv,.json,image/png,image/jpeg,image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+
+                        if (!file) return
+
+                        setSelectedFile(file)
+                      }}
+                    />
                   </div>
                   <div className="vx-composer-right">
                     <button
@@ -385,7 +460,7 @@ const Dashboard = () => {
                     <button
                       className="vx-send-btn"
                       onClick={handleSubmit}
-                      disabled={!chatInput.trim()}
+                      disabled={!chatInput.trim() && !selectedFile}
                     >
                       <span>Send</span>
                       <span className="material-symbols-outlined" style={{ fontSize: 17 }}>arrow_upward</span>
@@ -493,8 +568,17 @@ const Dashboard = () => {
                             </span>
                           </button>
                           {['content_copy', 'refresh', 'thumb_up', 'thumb_down'].map(icon => (
-                            <button key={icon} className="vx-icon-btn" title={icon}>
-                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{icon}</span>
+                            <button
+                              key={icon}
+                              className="vx-icon-btn"
+                              title={icon}
+                              onClick={icon === 'content_copy' ? () => handleCopy(msg.content, idx) : undefined}
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                                {icon === 'content_copy' && copiedIdx === idx
+                                  ? 'check'
+                                  : icon}
+                              </span>
                             </button>
                           ))}
 
@@ -528,8 +612,10 @@ const Dashboard = () => {
 
               {/* Floating input bar */}
               <div className="vx-float-bar" style={{ alignSelf: 'center' }}>
+                {fileInput}
+                {filePreview}
                 <form onSubmit={handleSubmit} className="vx-float-inner">
-                  <button type="button" className="vx-icon-btn">
+                  <button type="button" className="vx-icon-btn" onClick={() => fileInputRef.current?.click()} title="Attach file" >
                     <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add_circle</span>
                   </button>
                   <input
@@ -552,8 +638,8 @@ const Dashboard = () => {
                   </button>
                   <button
                     type="submit"
-                    className={`vx-circle-send ${chatInput.trim() ? 'active' : 'inactive'}`}
-                    disabled={!chatInput.trim()}
+                    className={`vx-circle-send ${(chatInput.trim() || selectedFile) ? 'active' : 'inactive'}`}
+                    disabled={!chatInput.trim() && !selectedFile}
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 17, color: 'white' }}>
                       arrow_upward

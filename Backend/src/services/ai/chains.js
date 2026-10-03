@@ -19,6 +19,8 @@ export const MODEL_CHAIN = [
   },
 ];
 
+export const IMAGE_READ_CHAIN = [MODEL_CHAIN[0]]; // Gemini only; your other models are likely text-only
+
 export const TITLE_CHAIN = [
   {
     name: "cohere",

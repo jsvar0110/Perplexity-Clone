@@ -11,6 +11,8 @@ import {
 
 import { authUser } from '../middlewares/auth.middleware.js';
 
+import { uploadFile } from '../middlewares/upload.middleware.js';
+
 
 const chatRouter = Router()
 
@@ -18,7 +20,7 @@ chatRouter.post('/create' , authUser , createChat)
 chatRouter.post('/title', authUser ,generateTitle )
 
 //Stream Response
-chatRouter.post('/message/stream' , authUser , streamMessage)
+chatRouter.post('/message/stream' , authUser, uploadFile , streamMessage)
 
 chatRouter.post('/message', authUser, sendMessage)
 

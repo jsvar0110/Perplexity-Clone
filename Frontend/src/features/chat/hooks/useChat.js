@@ -67,12 +67,13 @@ export const useChat = () => {
 
   // }
 
-  async function handleSendMessage({ message, chatId }) {
+  async function handleSendMessage({ message, chatId ,file }) {
     dispatch(setLoading(true));
     dispatch(setError(null));
 
+    let activeChatId = chatId;
+    
     try {
-      let activeChatId = chatId;
 
       
       // 1. CREATE NEW CHAT
@@ -175,7 +176,7 @@ export const useChat = () => {
 
       await streamMessage({
         message,
-
+        file,
         chatId: activeChatId,
 
         onEvent: (event) => {
@@ -276,7 +277,7 @@ export const useChat = () => {
           if (event.type === "error") {
             console.error("AI streaming error:", event.message);
 
-            dispatch(setError(event.message || "AI response failed"));
+            dispatch(finishStreamingMessage({chatId : activeChatId}));
 
             return;
           }
@@ -291,7 +292,8 @@ export const useChat = () => {
     } catch (error) {
       console.error("Chat streaming error:", error);
 
-      dispatch(setError(error.message || "Something went wrong"));
+       dispatch(setError(error.message || "Something went wrong"));
+        if (activeChatId) dispatch(finishStreamingMessage({ chatId: activeChatId }));
     } finally {
       dispatch(setLoading(false));
     }

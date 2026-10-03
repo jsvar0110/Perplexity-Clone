@@ -830,6 +830,22 @@ html, body { overflow: hidden; height: 100%; }
   cursor: not-allowed;
 }
 
+.vx-file-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 5px 10px;
+  border-radius: 9999px;
+  background: rgba(139,92,246,.12);
+  border: 1px solid rgba(139,92,246,.3);
+  color: #e4e1ed;
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+}
+.vx-file-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vx-file-preview button { background: none; border: none; color: inherit; cursor: pointer; font-size: 15px; line-height: 1; }
+
 /* ═══════════════════════════════════════
    RESPONSIVE  
 ═══════════════════════════════════════ */

@@ -6,7 +6,7 @@ import {
   createAgent,
 } from "langchain";
 
-import { MODEL_CHAIN, TITLE_CHAIN } from "./ai/chains.js";
+import { MODEL_CHAIN, TITLE_CHAIN ,IMAGE_READ_CHAIN } from "./ai/chains.js";
 
 import { runWithFallback, getStreamWithFallback } from "./ai/fallback.js";
 
@@ -37,11 +37,34 @@ export async function generateResponse(messages) {
         .join("");
 }
 
-export async function streamResponse(messages, sendEvent) {
+
+
+function buildFileContent(file, question) {
+  if (file.type === "image") {
+    return [
+      { type: "text", text: question },
+      { type: "image_url", image_url: { url: `data:${file.mimetype};base64,${file.data}` } },
+    ];
+  }
+  return `The user attached "${file.name}"${file.truncated ? " (truncated)" : ""}:\n--- FILE START ---\n${file.content}\n--- FILE END ---\n\n${question}`;
+}
+
+
+export async function streamResponse(messages, sendEvent , fileContent) {
+
+  const history = convertMessages(messages);
+
+  if (fileContent) {
+    const last = history.pop() ;
+    history.push(new HumanMessage(buildFileContent(fileContent, last.content)))
+  }
+
   const langchainMessages = [
     new SystemMessage(getStreamResponse()),
-    ...convertMessages(messages),
+    ...history
   ];
+
+  const chain = fileContent?.type === "image" ? IMAGE_READ_CHAIN : MODEL_CHAIN
 
   let fullResponse = "";
 
@@ -57,6 +80,7 @@ export async function streamResponse(messages, sendEvent) {
     for await (const item of getStreamWithFallback(
       langchainMessages,
       MODEL_CHAIN,
+      chain
     )) {
       // MODEL RESTART / FALLBACK
 

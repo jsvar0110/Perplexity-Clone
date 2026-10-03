@@ -1,4 +1,6 @@
 import { generateResponse , generateChatTitle , streamResponse } from "../services/ai.service.js";
+import {extractFileContent} from "../services/file.service.js"
+
 import chatModel from '../models/chat.model.js'
 import messageModel from "../models/message.model.js"
 
@@ -44,6 +46,8 @@ export async function streamMessage(req, res) {
 
     const { message, chat: chatId } = req.body
 
+    const file = req.file
+
     if (!chatId) {
         return res.status(400).json({
             message: "Chat ID is required"
@@ -76,6 +80,8 @@ export async function streamMessage(req, res) {
 
     try {
 
+        let fileContent = await extractFileContent(file)
+        
         // ==========================================
         // SAVE USER MESSAGE
         // ==========================================
@@ -102,7 +108,8 @@ export async function streamMessage(req, res) {
 
         const fullResponse = await streamResponse(
             messages,
-            sendEvent
+            sendEvent ,
+            fileContent
         )
 
 
