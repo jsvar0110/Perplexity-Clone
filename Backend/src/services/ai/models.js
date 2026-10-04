@@ -1,5 +1,5 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-// import { ChatMistralAI } from "@langchain/mistralai";
+import { ChatMistralAI } from "@langchain/mistralai";
 import { ChatOpenRouter } from "@langchain/openrouter";
 import { ChatGroq } from "@langchain/groq";
 import { ChatCohere } from "@langchain/cohere";
@@ -35,5 +35,9 @@ export const models = {
     baseURL: `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACC_ID}/ai/v1`,
     },
   })
-
+  ,
+  mistral : new ChatMistralAI({
+    model : "ministral-14b-2512" ,
+    apiKey : process.env.MISTRAL_API_KEY ,
+  })
 };

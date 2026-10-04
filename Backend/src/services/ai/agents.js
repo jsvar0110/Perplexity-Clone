@@ -26,5 +26,9 @@ export const agents = {
   cloudFlare : createAgent({
     model : models.cloudFlare,
     tools: [searchInternetTool]
-  }) 
+  }) ,
+  mistral : createAgent({
+    model : models.mistral ,
+    tools: [searchInternetTool]
+  })
 };

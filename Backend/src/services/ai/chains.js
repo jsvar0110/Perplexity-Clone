@@ -13,6 +13,11 @@ export const MODEL_CHAIN = [
     agent: agents.gemini,
   },
   {
+    name : "mistral" ,
+    model : models.mistral ,
+    agent : agents.mistral
+  } ,
+  {
     name : "cloudFlare" ,
     model: models.cloudFlare ,
     agent : agents.cloudFlare
