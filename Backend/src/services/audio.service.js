@@ -13,6 +13,7 @@ const ELEVENLABS_TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech";
 
 const HUME_TTS_URL = "https://api.hume.ai/v0/tts/file";
 const FISH_TTS_URL = "https://api.fish.audio/v1/tts";
+const MISTRAL_TTS_URL = "https://api.mistral.ai/v1/audio/speech";
 
 export async function transcribeAudio(buffer, filename = "audio.webm", mimetype = "audio/webm") {
   const form = new FormData();
@@ -160,6 +161,43 @@ async function synthesizeWithFish(text) {
 
   return { buffer: Buffer.from(await response.arrayBuffer()), mimeType: "audio/mpeg" };
 }
+
+
+
+async function synthesizeWithVoxtral(text) {
+  const response = await fetch(MISTRAL_TTS_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "voxtral-mini-tts-2603",
+      input: text,
+      voice: process.env.MISTRAL_VOICE_ID,
+      response_format: "mp3",
+    }),
+  });
+
+  if (!response.ok) {
+    const err = new Error(
+      `Voxtral TTS failed: ${response.status} ${await response.text()}`
+    );
+    err.status = response.status;
+    throw err;
+  }
+
+  const data = await response.json();
+
+  if (!data?.audio_data) {
+    throw new Error("Voxtral TTS returned no audio");
+  }
+
+  return {
+    buffer: Buffer.from(data.audio_data, "base64"),
+    mimeType: "audio/mpeg",
+  };
+}
 // Tries Gemini first; on a retryable failure (quota/rate-limit/5xx — see
 // isRetryableError in fallback.js) falls through to ElevenLabs. Each new
 // call starts back at Gemini, so a later request "falls back to Gemini"
@@ -167,6 +205,7 @@ async function synthesizeWithFish(text) {
 const ttsChain = [
   { name: "gemini-2.5-flash-preview-tts", synth: (text, voiceName) => synthesizeWithGemini(text, voiceName) },
   { name: "eleven_flash_v2_5", synth: (text) => synthesizeWithElevenLabs(text) },
+  {name : "voxtral-mini-tts-2603" , synth : (text) => synthesizeWithVoxtral(text) } ,
   { name: "hume-octave", synth: (text) => synthesizeWithHume(text) },
   { name: "fish-audio", synth: (text) => synthesizeWithFish(text) },
 ];
