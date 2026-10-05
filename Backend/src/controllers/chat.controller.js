@@ -109,7 +109,8 @@ export async function streamMessage(req, res) {
         const fullResponse = await streamResponse(
             messages,
             sendEvent ,
-            fileContent
+            fileContent ,
+            req.user.id
         )
 
 

@@ -16,10 +16,10 @@ export const transcribeAudio = async (audioBlob) => {
     return response.data
 }
 
-export const fetchSpeech = async (text) => {
+export const fetchSpeech = async (text , first = false) => {
     const response = await api.post(
         "/api/audio/speech",
-        { text },
+        { text , first },
         { responseType: "blob" }
     )
 

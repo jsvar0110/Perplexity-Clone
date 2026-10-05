@@ -8,6 +8,7 @@ const chatSlice = createSlice({
     currentChatId: null,
     isLoading: false,
     error: null,
+    limitNotice : null ,
   },
   reducers: {
     createNewChat: (state, action) => {
@@ -138,6 +139,9 @@ const chatSlice = createSlice({
     setError: (state, action) => {
       state.error = action.payload;
     },
+    setLimitNotice: (state, action) => {
+      state.limitNotice = action.payload;
+    },
   },
 });
 
@@ -146,6 +150,8 @@ export const {
   setCurrentChatId,
   setLoading,
   setError,
+  setLimitNotice,
+  
   createNewChat,
   updateChatTitle,
   addNewMessage,

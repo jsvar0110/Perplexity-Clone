@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown'
 import { useSelector, useDispatch } from 'react-redux'
 import { useChat } from '../hooks/useChat'
 import { useAudio } from '../hooks/useAudio'
-import { setCurrentChatId } from '../chat.slice'
+import { setCurrentChatId, setLimitNotice } from '../chat.slice'
 import remarkGfm from 'remark-gfm'
 import '../chat.css'
 
@@ -52,7 +52,7 @@ function GeneratedImage({ src, alt }) {
           style={{ fontSize: 18 }}
         >
           {busy ? 'progress_activity' : (
-            <svg xmlns="http://www.w3.org/2000/svg" height="34px" viewBox="0 -960 960 960" width="34px" fill="#e3e3e3"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" height="34px" viewBox="0 -960 960 960" width="34px" fill="#e3e3e3"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z" /></svg>
           )}
         </span>
       </button>
@@ -162,6 +162,7 @@ const Dashboard = () => {
 
   const chats = useSelector((state) => state.chat.chats)
   const currentChatId = useSelector((state) => state.chat.currentChatId)
+  const limitNotice = useSelector((state) => state.chat.limitNotice)
   const user = useSelector((state) => state.auth.user)
   const dispatch = useDispatch()
 
@@ -331,11 +332,29 @@ const Dashboard = () => {
     { icon: 'edit_note', title: 'Write & Refine', desc: 'Draft emails, essays, or copy with AI-powered suggestions.' },
   ]
 
+  useEffect(() => {
+    if (!limitNotice) return
+    const t = setTimeout(() => dispatch(setLimitNotice(null)), 6000)
+    return () => clearTimeout(t)
+  }, [limitNotice, dispatch])
+
+
   return (
     <div
       className="fixed inset-0 flex overflow-hidden"
       style={{ fontFamily: "'Inter', sans-serif" }}
     >
+
+      {limitNotice && (
+        <div className="vx-limit-toast" role="alert">
+          <div>
+            <strong>{limitNotice.feature === 'image' ? 'Daily image limit reached' : 'Daily voice limit reached'}</strong>
+            <p>{limitNotice.message}</p>
+          </div>
+          <button onClick={() => dispatch(setLimitNotice(null))}>✕</button>
+        </div>
+      )}
+      
       {/* ─── Mobile overlay ─── */}
       <div
         className={`vx-overlay ${sidebarOpen ? 'show' : ''}`}

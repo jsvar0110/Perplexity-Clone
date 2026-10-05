@@ -13,6 +13,8 @@ import {
   setCurrentChatId,
   setError,
   setLoading,
+  setLimitNotice ,
+
   createNewChat,
   updateChatTitle,
   addNewMessage,
@@ -267,6 +269,13 @@ export const useChat = () => {
               }),
             );
 
+            return;
+          }
+
+
+          // LIMIT
+          if (event.type === "limit") {
+            dispatch(setLimitNotice({ feature: event.feature, message: event.message }));
             return;
           }
 

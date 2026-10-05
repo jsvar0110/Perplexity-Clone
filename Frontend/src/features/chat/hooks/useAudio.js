@@ -1,5 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from "react"
 import { transcribeAudio, fetchSpeech } from "../service/audio.api"
+import {useDispatch} from "react-redux"
+import { setLimitNotice } from "../chat.slice"
 
 // Strip markdown/citations and split into chunks Chatterbox can handle
 const splitForTts = (raw, max = 280) => {
@@ -31,6 +33,7 @@ const splitForTts = (raw, max = 280) => {
 }
 
 export const useAudio = () => {
+    const dispatch = useDispatch()
     const mediaRecorderRef = useRef(null)
     const chunksRef = useRef([])
     const audioPlayerRef = useRef(null)
@@ -112,7 +115,7 @@ export const useAudio = () => {
 
         try {
             const chunks = splitForTts(text)
-            let next = chunks.length ? fetchSpeech(chunks[0]) : null
+            let next = chunks.length ? fetchSpeech(chunks[0] , true) : null
 
             for (let i = 0; i < chunks.length; i++) {
                 
@@ -133,6 +136,11 @@ export const useAudio = () => {
                 if (token !== playTokenRef.current) return
             }
         } catch (error) {
+
+            if (error.response?.status === 429) {
+                dispatch(setLimitNotice({feature : "tts" , message : "You've used all 5 voice playbacks for today. Your limit resets tomorrow"}))
+            }
+
             console.error("TTS playback failed:", error)
         } finally {
             if (token === playTokenRef.current) {

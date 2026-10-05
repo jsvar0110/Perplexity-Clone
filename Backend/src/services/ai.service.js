@@ -50,7 +50,7 @@ function buildFileContent(file, question) {
 }
 
 
-export async function streamResponse(messages, sendEvent, fileContent) {
+export async function streamResponse(messages, sendEvent, fileContent, userId) {
 
   const history = convertMessages(messages);
 
@@ -80,7 +80,7 @@ export async function streamResponse(messages, sendEvent, fileContent) {
     for await (const item of getStreamWithFallback(
       langchainMessages,
       // MODEL_CHAIN,
-      chain
+      chain, userId
     )) {
       // MODEL RESTART / FALLBACK
 
@@ -112,6 +112,11 @@ export async function streamResponse(messages, sendEvent, fileContent) {
           fullResponse += md;
           sendEvent({ type: "token", content: md });
         }
+
+        if (typeof text === "string" && text.startsWith("IMAGE_LIMIT_REACHED")) {
+          sendEvent({ type: "limit", feature: "image", message: "You've used all 2 image generations for today. Your limit resets tomorrow." });
+        }
+        
       }
 
 

@@ -902,6 +902,10 @@ html, body { overflow: hidden; height: 100%; }
 .vx-img-dl:hover { background: rgba(0, 0, 0, .85); }
 .vx-img-dl:disabled { cursor: wait; }
 
+/* LIMIT */
+.vx-limit-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:100;display:flex;gap:12px;align-items:flex-start;max-width:min(420px,90vw);padding:14px 16px;border-radius:14px;background:#1c1c22;color:#fff;border:1px solid rgba(255,255,255,.12);box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.vx-limit-toast p{margin:4px 0 0;font-size:13px;opacity:.75}
+.vx-limit-toast button{background:none;border:0;color:inherit;cursor:pointer;opacity:.6}
 
 /* ═══════════════════════════════════════
    RESPONSIVE  

@@ -1,3 +1,5 @@
+import { ConfigurableModel } from "langchain/chat_models/universal";
+
 export function isRetryableError(err) {
   const status = err?.status || err?.statusCode || err?.error?.code;
 
@@ -41,7 +43,7 @@ export async function runWithFallback(fn, chain) {
   throw lastErr; // all models exhausted
 }
 
-export async function* getStreamWithFallback(langchainMessages, chain) {
+export async function* getStreamWithFallback(langchainMessages, chain , userId) {
   let lastErr;
 
   let isFirstAttempt = true;
@@ -59,6 +61,9 @@ export async function* getStreamWithFallback(langchainMessages, chain) {
         },
         {
           version: "v2",
+          configurable : {
+            userId
+          }
         },
       );
 
