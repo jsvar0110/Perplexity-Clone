@@ -41,3 +41,13 @@ export const models = {
     apiKey : process.env.MISTRAL_API_KEY ,
   })
 };
+
+export const imageModels = {
+  fluxSchnell: {
+    provider: "cloudflare",
+    id: "@cf/black-forest-labs/flux-1-schnell",
+    accountId: process.env.CLOUDFLARE_ACC_ID,
+    apiKey: process.env.CLOUDFLARE_API_KEY,
+    steps: 4,
+  },
+};

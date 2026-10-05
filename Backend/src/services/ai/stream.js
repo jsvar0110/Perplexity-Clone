@@ -31,6 +31,12 @@ export function handleToolEvent(event, sendEvent) {
         message: "Searching the web...",
       });
     }
+
+
+    if (event.name === "generateImage") {
+      sendEvent({ type: "status", status: "imagining", message: "Generating image..." });
+    }
+
   }
 
   // =========================================

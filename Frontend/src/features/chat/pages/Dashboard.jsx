@@ -11,6 +11,58 @@ import { setCurrentChatId } from '../chat.slice'
 import remarkGfm from 'remark-gfm'
 import '../chat.css'
 
+
+
+
+function GeneratedImage({ src, alt }) {
+  const [busy, setBusy] = useState(false)
+
+  const handleDownload = async () => {
+    try {
+      setBusy(true)
+      const res = await fetch(src)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `veltrix-image-${Date.now()}.jpg`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      window.open(src, '_blank') // fallback: open in new tab
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <span className="vx-img-wrap">
+      <img src={src} alt={alt} />
+      <button
+        type="button"
+        className="vx-img-dl"
+        onClick={handleDownload}
+        disabled={busy}
+        title="Download image"
+      >
+        <span
+          className={`material-symbols-outlined ${busy ? 'vx-spin' : ''}`}
+          style={{ fontSize: 18 }}
+        >
+          {busy ? 'progress_activity' : (
+            <svg xmlns="http://www.w3.org/2000/svg" height="34px" viewBox="0 -960 960 960" width="34px" fill="#e3e3e3"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
+          )}
+        </span>
+      </button>
+    </span>
+  )
+}
+
+
+
+
 /* ─── Logo image component (uses the PNG from /public) ─── */
 const Logo = ({ size = 28 }) => (
   <img
@@ -58,7 +110,12 @@ const AIActivity = ({ status }) => {
     writing: {
       icon: "edit_note",
       text: "Writing response..."
-    }
+    },
+
+    imagining: {
+      icon: "image",
+      text: "Generating image..."
+    },
   }
 
   const current =
@@ -605,6 +662,7 @@ const Dashboard = () => {
                                 strong: ({ children }) => <strong>{children}</strong>,
                                 code: ({ children }) => <code>{children}</code>,
                                 pre: ({ children }) => <pre>{children}</pre>,
+                                img: ({ src, alt }) => <GeneratedImage src={src} alt={alt} />,
                               }}
                             >
                               {msg.content}

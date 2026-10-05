@@ -43,6 +43,10 @@ export function getResponse() {
                         and a similar-sounding event may have already happened before under different 
                         circumstances. Never answer such questions purely from memory.
 
+                        If the user asks you to create/draw/generate/make an image, call the generateImage tool.
+                        The image is displayed to the user automatically. NEVER write the image URL or a
+                        markdown image yourself; just add one short sentence after the tool finishes.
+
                         If you genuinely don't know something and search didn't help, say so — do not guess.
     
     `
@@ -132,6 +136,13 @@ export function getStreamResponse() {
                         
 
                         Only use the searchInternet tool when the question depends on current events, real-time data, or information that could have changed after your training.
+                        
+
+
+                        If the user asks you to create/draw/generate/make an image, call the generateImage tool.
+                        The image is displayed to the user automatically. NEVER write the image URL or a
+                        markdown image yourself; just add one short sentence after the tool finishes.
+
 
     `
 

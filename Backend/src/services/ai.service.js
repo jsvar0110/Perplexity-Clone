@@ -6,7 +6,7 @@ import {
   createAgent,
 } from "langchain";
 
-import { MODEL_CHAIN, TITLE_CHAIN ,IMAGE_READ_CHAIN } from "./ai/chains.js";
+import { MODEL_CHAIN, TITLE_CHAIN, IMAGE_READ_CHAIN } from "./ai/chains.js";
 
 import { runWithFallback, getStreamWithFallback } from "./ai/fallback.js";
 
@@ -32,9 +32,9 @@ export async function generateResponse(messages) {
   return typeof last.content === "string"
     ? last.content
     : last.content
-        .filter((b) => b.type === "text")
-        .map((b) => b.text)
-        .join("");
+      .filter((b) => b.type === "text")
+      .map((b) => b.text)
+      .join("");
 }
 
 
@@ -50,12 +50,12 @@ function buildFileContent(file, question) {
 }
 
 
-export async function streamResponse(messages, sendEvent , fileContent) {
+export async function streamResponse(messages, sendEvent, fileContent) {
 
   const history = convertMessages(messages);
 
   if (fileContent) {
-    const last = history.pop() ;
+    const last = history.pop();
     history.push(new HumanMessage(buildFileContent(fileContent, last.content)))
   }
 
@@ -79,7 +79,7 @@ export async function streamResponse(messages, sendEvent , fileContent) {
   try {
     for await (const item of getStreamWithFallback(
       langchainMessages,
-      MODEL_CHAIN,
+      // MODEL_CHAIN,
       chain
     )) {
       // MODEL RESTART / FALLBACK
@@ -103,34 +103,19 @@ export async function streamResponse(messages, sendEvent , fileContent) {
 
       handleToolEvent(event, sendEvent);
 
-      //        // =========================================
-      //   // TOOL START
-      //   // =========================================
 
-      //   if (event.event === "on_tool_start") {
-      //     if (event.name === "searchInternet") {
-      //       sendEvent({
-      //         type: "status",
-      //         status: "searching",
-      //         message: "Searching the web...",
-      //       });
-      //     }
-      //   }
+      if (event.event === "on_tool_end" && event.name === "generateImage") {
+        const out = event.data?.output;
+        const text = typeof out === "string" ? out : out?.content;
+        if (typeof text === "string" && text.startsWith("IMAGE_URL:")) {
+          const md = `\n\n![Generated image](${text.slice(10)})\n\n`;
+          fullResponse += md;
+          sendEvent({ type: "token", content: md });
+        }
+      }
 
-      //   // =========================================
-      //   // TOOL END
-      //   // =========================================
 
-      //   if (event.event === "on_tool_end") {
-      //     if (event.name === "searchInternet") {
-      //       sendEvent({
-      //         type: "status",
-      //         status: "researching",
-      //         message: "Reviewing search results...",
-      //       });
-      //     }
-      //   }
-      // }
+
 
       if (event.event === "on_chat_model_stream") {
         const text = getStreamText(event, usedModel);

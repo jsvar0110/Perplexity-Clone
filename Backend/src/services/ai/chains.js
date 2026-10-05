@@ -1,4 +1,4 @@
-import { models } from "./models.js";
+import { models , imageModels } from "./models.js";
 import { agents } from "./agents.js";
 
 export const MODEL_CHAIN = [
@@ -24,7 +24,7 @@ export const MODEL_CHAIN = [
   },
 ];
 
-export const IMAGE_READ_CHAIN = [MODEL_CHAIN[0]]; // Gemini only; your other models are likely text-only
+export const IMAGE_READ_CHAIN = [MODEL_CHAIN[1]]; // Gemini only; your other models are likely text-only
 
 export const TITLE_CHAIN = [
   {
@@ -37,4 +37,10 @@ export const TITLE_CHAIN = [
     model: models.groq,
     agent: agents.groq,
   },
+];
+
+/* IMAGE */
+
+export const IMAGE_CHAIN = [
+  { name: "fluxSchnell", model: imageModels.fluxSchnell },
 ];

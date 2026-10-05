@@ -882,6 +882,27 @@ html, body { overflow: hidden; height: 100%; }
 .vx-file-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vx-file-preview button { background: none; border: none; color: inherit; cursor: pointer; font-size: 15px; line-height: 1; }
 
+
+/* IMAGE */
+.vx-prose img { max-width: 80%; border-radius: 12px; margin: 8px 0; }
+
+/* Download image button */
+
+.vx-img-wrap { position: relative; display: inline-block; max-width: 100%; margin: 8px 0; }
+.vx-img-wrap img { display: block; max-width: 80%; border-radius: 12px; }
+.vx-img-dl {
+  position: absolute; top: 19px; left: 8px;
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  background: rgba(0, 0, 0, .55); color: #fff;
+  backdrop-filter: blur(6px);
+  cursor: pointer; transition: background .2s;
+}
+.vx-img-dl:hover { background: rgba(0, 0, 0, .85); }
+.vx-img-dl:disabled { cursor: wait; }
+
+
 /* ═══════════════════════════════════════
    RESPONSIVE  
 ═══════════════════════════════════════ */
