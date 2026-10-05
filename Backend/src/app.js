@@ -1,4 +1,7 @@
 import express from 'express'
+import passport from 'passport'
+import {Strategy as GoogleStrategy} from "passport-google-oauth20"
+
 import cookieParser from 'cookie-parser'
 import authRouter from './routes/auth.route.js'
 import chatRouter from './routes/chat.routes.js'
@@ -20,6 +23,17 @@ app.use(cors({
     credentials : true ,
     methods : ["GET" , "POST" , "PUT" , "DELETE"]
 }))
+
+
+app.use(passport.initialize())
+passport.use(new GoogleStrategy({
+    clientID : process.env.GOOGLE_CLIENT_ID ,
+    clientSecret : process.env.GOOGLE_CLIENT_SECRET ,
+    callbackURL : process.env.GOOGLE_OAUTH_CALLBACK_URL
+
+},(accessToken , refreshToken , profile , done ) => done(null , profile)))
+
+
 
 //Health check
 app.get("/" , (req ,res)=>{

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useAuth } from '../hook/useAuth'
+import ContinueWithGoogle from '../components/ContinueWithGoogle'
 import '../auth.css'
 
 const VeltrixLogo = ({ size = 32 }) => (
@@ -167,6 +168,13 @@ export default function Register() {
               <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </button>
           </form>
+
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-xs text-gray-500">OR</span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+          <ContinueWithGoogle />
 
           <p className="text-center mt-5" style={{ fontSize: 13, color: '#938e9f' }}>
             Already have an account?{' '}

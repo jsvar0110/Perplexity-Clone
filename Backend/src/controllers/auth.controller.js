@@ -80,6 +80,16 @@ export async function login(req, res) {
         })
     }
 
+
+    if (!user.password) {
+
+        return res.status(400).json({
+            message: "This account uses Google Sign-in , Please continue with Google",
+            success: false,
+            err: "Google account"
+        })
+
+    }
     const isPasswordMatch = await user.comparePassword(password)
 
     if (!isPasswordMatch) {
@@ -110,7 +120,7 @@ export async function login(req, res) {
     res.cookie("token" , token)
 
     res.status(200).json({
-        messsage : "Login successfully" ,
+        message : "Login successfully" ,
         success : true ,
         user : {
             id : user._id ,
@@ -208,9 +218,67 @@ export async function verifyEmail(req, res) {
     }
 
 }
-
-
 /* 
     Token in register which will be made after registering .Then node-mailer sends link to the user email address
     then when the user clicks on the link it verifies the email with token if it matches then User is verified 
 */
+
+
+async function generateUniqueUsername(displayName, email) {
+
+    const clean = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)
+    let base = clean(displayName) || clean(email.split('@')[0]) || 'user'
+    if (base.length < 3) base = "user" + base
+
+    let username = base , i = 1
+    while (await userModel.exists({ username })) username = `${base}${i++}`
+    return username
+
+}
+
+export async function googleCallback(req, res) {
+
+    const FE = process.env.FRONTEND_URL
+    try {
+
+        const { id, displayName, emails } = req.user
+        const email = emails?.[0]?.value?.toLowerCase()
+        
+        if (!email || emails[0].verified === false) {
+            
+            return res.redirect(`${FE}/login?error=google_email_unverified`)
+
+        }
+
+        let user = await userModel.findOne({googleId : id}) || await userModel.findOne({email})
+
+        if (!user) {
+            
+            const username = await generateUniqueUsername(displayName , email)
+            user = await userModel.create({username , email , googleId : id , verified : true})
+
+        }else if (!user.googleId) {
+            if(!user.verified) user.password = undefined ;
+            user.googleId = id
+            user.verified = true
+            await user.save()
+        }else if (user.googleId !== id) {
+            return res.redirect(`${FE}/login?error=google_account_mismatch`)
+        }
+
+        const token = jwt.sign({
+            id: user._id,
+            username: user.username,
+        }, process.env.JWT_SECRET, { expiresIn: '7d' })
+
+        res.cookie("token", token)
+
+        return res.redirect(`${FE}/`)
+    
+    } catch (error) {
+     
+        console.error('Google Auth Error:' ,error)
+        return res.redirect(`${FE}/login?error=google_auth_failed`)
+
+    }
+}

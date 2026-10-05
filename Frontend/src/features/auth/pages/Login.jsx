@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useAuth } from '../hook/useAuth'
 import { useSelector } from 'react-redux'
 import { Navigate } from 'react-router'
+import ContinueWithGoogle from '../components/ContinueWithGoogle'
 import '../auth.css'
 
 const VeltrixLogo = ({ size = 32 }) => (
@@ -44,6 +45,9 @@ export default function Login() {
   const loading = useSelector(s => s.auth.loading)
   const { handleLogin } = useAuth()
   const navigate = useNavigate()
+
+  const [params] = useSearchParams()
+  const err = params.get('error')
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -133,6 +137,7 @@ export default function Login() {
             <div>
               <h1 style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 22, color: '#fff', letterSpacing: '-.01em' }}>Welcome Back</h1>
               <p style={{ fontSize: 13, color: '#938e9f', marginTop: 2 }}>Sign in to continue your journey.</p>
+              {err && <p style={{ color: '#ffb4ab', fontSize: 13, marginBottom: 12 }}>Google sign-in failed. Try again or use email.</p>}
             </div>
           </div>
 
@@ -155,6 +160,13 @@ export default function Login() {
             />
             <button type="submit" className="auth-submit-btn mt-1">Sign In</button>
           </form>
+
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-xs text-gray-500">OR</span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+          <ContinueWithGoogle />
 
           <p className="text-center mt-5" style={{ fontSize: 13, color: '#938e9f' }}>
             Don't have an account?{' '}
