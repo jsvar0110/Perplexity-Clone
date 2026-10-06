@@ -1,350 +1,98 @@
 import React, { useEffect, useRef, useState } from 'react'
-
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import 'katex/dist/katex.min.css';
-import ReactMarkdown from 'react-markdown'
 import { useSelector, useDispatch } from 'react-redux'
 import { useChat } from '../hooks/useChat'
 import { useAudio } from '../hooks/useAudio'
+import { useFileDrop } from '../hooks/UseFileDrop.js'
 import { setCurrentChatId, setLimitNotice } from '../chat.slice'
-import remarkGfm from 'remark-gfm'
+
+import Sidebar from '../components/Sidebar.jsx'
+import TopBar from '../components/Topbar.jsx'
+import WelcomeScreen from '../components/WelcomeScreen.jsx'
+import ChatThread from '../components/ChatThread.jsx'
+import FloatingInput from '../components/FloatingInput.jsx'
 import '../chat.css'
 
-
-
-
-function GeneratedImage({ src, alt }) {
-  const [busy, setBusy] = useState(false)
-
-  const handleDownload = async () => {
-    try {
-      setBusy(true)
-      const res = await fetch(src)
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `veltrix-image-${Date.now()}.jpg`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
-    } catch {
-      window.open(src, '_blank') // fallback: open in new tab
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <span className="vx-img-wrap">
-      <img src={src} alt={alt} />
-      <button
-        type="button"
-        className="vx-img-dl"
-        onClick={handleDownload}
-        disabled={busy}
-        title="Download image"
-      >
-        <span
-          className={`material-symbols-outlined ${busy ? 'vx-spin' : ''}`}
-          style={{ fontSize: 18 }}
-        >
-          {busy ? 'progress_activity' : (
-            <svg xmlns="http://www.w3.org/2000/svg" height="34px" viewBox="0 -960 960 960" width="34px" fill="#e3e3e3"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z" /></svg>
-          )}
-        </span>
-      </button>
-    </span>
-  )
-}
-
-
-
-
-/* ─── Logo image component (uses the PNG from /public) ─── */
-const Logo = ({ size = 28 }) => (
-  <img
-    src="/Veltrix2.png"
-    alt="Veltrix AI Logo"
-    width={size}
-    height={size}
-    className="vx-logo-img"
-    style={{ width: size, height: size, objectFit: 'contain' }}
-  />
-)
-
-/* ─── Small SVG logo for AI message header ─── */
-const SmallLogo = () => (
-  <svg width="18" height="18" viewBox="0 0 120 120" fill="none">
-    <defs>
-      <linearGradient id="smG1" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#c084fc" />
-        <stop offset="100%" stopColor="#6366f1" />
-      </linearGradient>
-    </defs>
-    <path d="M34 36L60 84L86 36L72 36L60 62L48 36H34Z" fill="url(#smG1)" />
-    <path d="M60 84L42 48L51 48L60 68L69 48L78 48L60 84Z" fill="white" opacity="0.6" />
-  </svg>
-)
-
-const AIActivity = ({ status }) => {
-
-  const statusMap = {
-    thinking: {
-      icon: "psychology",
-      text: "Understanding your question..."
-    },
-
-    searching: {
-      icon: "travel_explore",
-      text: "Searching the web..."
-    },
-
-    researching: {
-      icon: "menu_book",
-      text: "Reviewing search results..."
-    },
-
-    writing: {
-      icon: "edit_note",
-      text: "Writing response..."
-    },
-
-    imagining: {
-      icon: "image",
-      text: "Generating image..."
-    },
-  }
-
-  const current =
-    statusMap[status] ||
-    statusMap.thinking
-
-  return (
-    <div className="vx-ai-activity">
-
-      <span
-        className="material-symbols-outlined vx-activity-icon"
-      >
-        {current.icon}
-      </span>
-
-      <span className="vx-activity-text">
-        {current.text}
-      </span>
-
-      <span className="vx-activity-dots">
-        <span />
-        <span />
-        <span />
-      </span>
-
-    </div>
-  )
-}
+const BLOBS = [
+  { cls: 'vx-blob-1', pos: { top: '-12%', left: '22%' }, size: 520, color: 'rgba(99,102,241,.28)', blur: 110 },
+  { cls: 'vx-blob-2', pos: { top: '30%', right: '-10%' }, size: 580, color: 'rgba(139,92,246,.24)', blur: 130 },
+  { cls: 'vx-blob-3', pos: { bottom: '-14%', left: '35%' }, size: 500, color: 'rgba(192,132,252,.18)', blur: 100 },
+]
 
 const Dashboard = () => {
   const chat = useChat()
   const audio = useAudio()
-  // const [activeChat, setActiveChat] = useState(null)
+  const drop = useFileDrop()
+  const dispatch = useDispatch()
+
   const [chatInput, setChatInput] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const chatBottomRef = useRef(null)
   const textareaRef = useRef(null)
-  const fileInputRef = useRef(null)
-  const [selectedFile, setSelectedFile] = useState(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const dragCounterRef = useRef(0)
-  const [copiedIdx, setCopiedIdx] = useState(null)
 
   const chats = useSelector((state) => state.chat.chats)
   const currentChatId = useSelector((state) => state.chat.currentChatId)
   const limitNotice = useSelector((state) => state.chat.limitNotice)
   const user = useSelector((state) => state.auth.user)
-  const dispatch = useDispatch()
 
-  // Get user info for avatar
   const userName = user?.username || user?.name || 'User'
-  const userInitial = userName.charAt(0).toUpperCase()
 
-  // Filtered chats by search
   const chatList = Object.values(chats).sort(
-    (a, b) =>
-      new Date(b.lastUpdated || 0) -
-      new Date(a.lastUpdated || 0)
+    (a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0)
   )
-
   const filteredChats = searchQuery
-    ? chatList.filter(c => c.title?.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? chatList.filter((c) => c.title?.toLowerCase().includes(searchQuery.toLowerCase()))
     : chatList
+
+  const hasMessages = currentChatId && chats[currentChatId]?.messages?.length > 0
 
   useEffect(() => {
     chat.initializeSocketConnection()
     chat.handleGetChats()
   }, [])
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom when switching chats
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'auto' })
   }, [currentChatId])
 
-  const handleSubmit = (e) => {
-    e?.preventDefault()
-    const trimmed = chatInput.trim()
-    if (!trimmed && !selectedFile) return
-    chat.handleSendMessage({
-      message: trimmed || 'Please read the attached file.',
-      chatId: currentChatId,
-      file: selectedFile,
-    })
-
-    setChatInput('')
-
-    clearFile()
-    setSelectedFile(null)
-
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-
-    textareaRef.current?.focus()
-  }
-
-  const clearFile = () => {
-    setSelectedFile(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  // ── Drag-and-drop handlers ──
-  const handleDragOver = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    dragCounterRef.current += 1
-    if (dragCounterRef.current === 1) setIsDragging(true)
-  }
-
-  const handleDragLeave = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    dragCounterRef.current -= 1
-    if (dragCounterRef.current === 0) setIsDragging(false)
-  }
-
-  const handleDrop = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    dragCounterRef.current = 0
-    setIsDragging(false)
-    const file = e.dataTransfer.files?.[0]
-    if (!file) return
-    const allowed = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain',
-      'text/markdown',
-      'text/csv',
-      'application/json',
-      'image/png',
-      'image/jpeg',
-      'image/webp',
-    ]
-    if (!allowed.includes(file.type)) {
-      alert(`Unsupported file type: ${file.type || file.name}`)
-      return
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File is too large (max 10 MB)')
-      return
-    }
-    setSelectedFile(file)
-  }
-
-  const handleCopy = async (text, idx) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopiedIdx(idx)
-      setTimeout(() => setCopiedIdx(null), 1500)
-    } catch (err) {
-      console.error('Copy failed:', err)
-    }
-  }
-
-  // shared by both composers (only one is mounted at a time)
-  const fileInput = (
-    <input
-      ref={fileInputRef}
-      type="file"
-      hidden
-      accept=".pdf,.docx,.txt,.md,.csv,.json,image/png,image/jpeg,image/webp"
-      onChange={(e) => {
-        const f = e.target.files?.[0]
-        if (!f) return
-        if (f.size > 10 * 1024 * 1024) {
-          alert('File is too large (max 10 MB)')
-          e.target.value = ''
-          return
-        }
-        setSelectedFile(f)
-      }}
-    />
-  )
-
-  const filePreview = selectedFile && (
-    <div className="vx-file-preview">
-      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>description</span>
-      <span className="vx-file-name">{selectedFile.name}</span>
-      <button type="button" onClick={clearFile}>×</button>
-    </div>
-  )
-
-  const openChat = (chatId) => {
-    chat.handleOpenChat(chatId, chats)
-    setSidebarOpen(false)
-  }
-
-  const closeSidebar = () => setSidebarOpen(false)
-
-  const handleMicToggle = async () => {
-    if (audio.isRecording) {
-      const text = await audio.stopRecording()
-      if (text?.trim()) {
-        chat.handleSendMessage({ message: text.trim(), chatId: currentChatId })
-      }
-      return
-    }
-    await audio.startRecording()
-  }
-
-  const hasMessages = currentChatId && chats[currentChatId]?.messages?.length > 0
-  const isAudioPlaying = audio.speakingMsgId !== null && !audio.isGenerating
-
-  // Determine time of day for greeting
-  const hour = new Date().getHours()
-  const timeGreeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening'
-
-  const starterCards = [
-    { icon: 'security', title: 'Audit Smart Contract', desc: 'Detect re-entrancy vectors and gas optimizations in Solidity.' },
-    { icon: 'psychology', title: 'Explain a Concept', desc: 'Deep-dive into any topic with clear, structured explanations.' },
-    { icon: 'edit_note', title: 'Write & Refine', desc: 'Draft emails, essays, or copy with AI-powered suggestions.' },
-  ]
-
+  // Auto-hide limit toast
   useEffect(() => {
     if (!limitNotice) return
     const t = setTimeout(() => dispatch(setLimitNotice(null)), 6000)
     return () => clearTimeout(t)
   }, [limitNotice, dispatch])
 
+  const handleSubmit = (e) => {
+    e?.preventDefault()
+    const trimmed = chatInput.trim()
+    if (!trimmed && !drop.selectedFile) return
+    chat.handleSendMessage({
+      message: trimmed || 'Please read the attached file.',
+      chatId: currentChatId,
+      file: drop.selectedFile,
+    })
+    setChatInput('')
+    drop.clearFile()
+    textareaRef.current?.focus()
+  }
+
+  const openChat = (chatId) => {
+    chat.handleOpenChat(chatId, chats)
+    setSidebarOpen(false)
+  }
+
+  const handleMicToggle = async () => {
+    if (audio.isRecording) {
+      const text = await audio.stopRecording()
+      if (text?.trim()) chat.handleSendMessage({ message: text.trim(), chatId: currentChatId })
+      return
+    }
+    await audio.startRecording()
+  }
 
   return (
-    <div
-      className="fixed inset-0 flex overflow-hidden"
-      style={{ fontFamily: "'Inter', sans-serif" }}
-    >
-
+    <div className="fixed inset-0 flex overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
       {limitNotice && (
         <div className="vx-limit-toast" role="alert">
           <div>
@@ -354,448 +102,66 @@ const Dashboard = () => {
           <button onClick={() => dispatch(setLimitNotice(null))}>✕</button>
         </div>
       )}
-      
-      {/* ─── Mobile overlay ─── */}
-      <div
-        className={`vx-overlay ${sidebarOpen ? 'show' : ''}`}
-        onClick={closeSidebar}
+
+      {/* Mobile overlay */}
+      <div className={`vx-overlay ${sidebarOpen ? 'show' : ''}`} onClick={() => setSidebarOpen(false)} />
+
+      <Sidebar
+        open={sidebarOpen}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        chats={filteredChats}
+        currentChatId={currentChatId}
+        onOpenChat={openChat}
+        onNewChat={() => dispatch(setCurrentChatId(null))}
+        userName={userName}
       />
 
-      {/* ═══════════════════════════════════
-          SIDEBAR
-      ═══════════════════════════════════ */}
-      <aside className={`vx-sidebar ${sidebarOpen ? 'open' : ''}`}>
-
-        {/* Brand */}
-        <div className="vx-brand" style={{ justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <Logo size={35} />
-            <span className="vx-brand-name">Veltrix AI</span>
-          </div>
-          <button
-            onClick={() => {
-              dispatch(setCurrentChatId(null))
-            }}
-            className="vx-icon-btn"
-            title="New Chat"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>edit_square</span>
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="vx-search-wrap">
-          <div className="vx-search">
-            <span className="material-symbols-outlined">search</span>
-            <input
-              type="text"
-              placeholder="Search chats"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Recent Chats */}
-        <div className="vx-section-label">Recent Chats</div>
-        <div className="vx-chat-list vx-noscroll">
-          {filteredChats.length === 0 ? (
-            <div className="vx-no-chats">No recent chats</div>
-          ) : (
-            filteredChats.map((c) => (
-              <button
-                key={c.id}
-                className={`vx-chat-entry ${currentChatId === c.id ? 'active' : ''}`}
-
-                onClick={() => openChat(c.id)}
-              >
-                <span className="vx-chat-dot" />
-                <span className="vx-chat-title">{c.title || 'Untitled Chat'}</span>
-              </button>
-            ))
-          )}
-        </div>
-
-        {/* Footer — User */}
-        <div className="vx-sidebar-footer">
-          <div className="vx-user-row">
-            <div className="vx-user-avatar">{userInitial}</div>
-            <span className="vx-user-name">{userName}</span>
-          </div>
-        </div>
-      </aside>
-
-      {/* ═══════════════════════════════════
-          MAIN CONTENT
-      ═══════════════════════════════════ */}
       <main className="vx-main">
-
         {/* Atmospheric background blobs */}
         <div className="vx-atm">
-          <div
-            className="vx-atm-blob vx-blob-1"
-            style={{
-              top: '-12%', left: '22%',
-              width: 520, height: 520,
-              background: 'rgba(99,102,241,.28)',
-              filter: 'blur(110px)',
-            }}
-          />
-          <div
-            className="vx-atm-blob vx-blob-2"
-            style={{
-              top: '30%', right: '-10%',
-              width: 580, height: 580,
-              background: 'rgba(139,92,246,.24)',
-              filter: 'blur(130px)',
-            }}
-          />
-          <div
-            className="vx-atm-blob vx-blob-3"
-            style={{
-              bottom: '-14%', left: '35%',
-              width: 500, height: 500,
-              background: 'rgba(192,132,252,.18)',
-              filter: 'blur(100px)',
-            }}
-          />
+          {BLOBS.map((b) => (
+            <div
+              key={b.cls}
+              className={`vx-atm-blob ${b.cls}`}
+              style={{ ...b.pos, width: b.size, height: b.size, background: b.color, filter: `blur(${b.blur}px)` }}
+            />
+          ))}
           <div className="vx-grid-bg" />
         </div>
 
-        {/* ── Top Bar ── */}
-        <header className="vx-topbar">
-          <div className="vx-topbar-left">
-            {/* Mobile menu toggle */}
-            <button
-              className="vx-menu-toggle"
-              onClick={() => setSidebarOpen(p => !p)}
-              aria-label="Toggle sidebar"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-                {sidebarOpen ? 'close' : 'menu'}
-              </span>
-            </button>
+        <TopBar sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((p) => !p)} />
 
-            {/* Model indicator */}
-            <div className="vx-model-pill">
-              <span className="vx-model-dot" />
-              <span style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 600, fontSize: 12.5 }}>
-                Veltrix AI
-              </span>
-            </div>
-          </div>
-
-          {/* Right actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <button className="vx-icon-btn" title="Settings">
-              <span className="material-symbols-outlined" style={{ fontSize: 19 }}>settings</span>
-            </button>
-            <button className="vx-icon-btn" title="More">
-              <span className="material-symbols-outlined" style={{ fontSize: 19 }}>more_vert</span>
-            </button>
-          </div>
-        </header>
-
-        {/* ── Content Area ── */}
         <div className="vx-content vx-scroll" style={{ justifyContent: hasMessages ? 'flex-start' : 'center' }}>
-
           {!hasMessages ? (
-
-            /* ───── EMPTY / WELCOME STATE ───── */
-            <div className="vx-welcome">
-
-              {/* Orb */}
-              <div className="vx-orb-wrap vu0">
-                <div
-                  className="vx-orb-bloom"
-                  style={{ width: 200, height: 200 }}
-                />
-                <div
-                  className="vx-orb"
-                  style={{ width: 100, height: 100 }}
-                >
-                  <Logo size={65} />
-                </div>
-              </div>
-
-              {/* Greeting */}
-              <h1
-                className="vx-greeting vu1"
-                style={{ fontSize: 34 }}
-              >
-                {timeGreeting}, {userName}.
-              </h1>
-              <p className="vx-subtitle vu1">
-                Can I help you with anything?
-              </p>
-
-              {/* Composer */}
-              <div
-                className={`vx-composer vu2${isDragging ? ' vx-drag-over' : ''}`}
-                style={{ maxWidth: 700, position: 'relative' }}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                {isDragging && (
-                  <div className="vx-drop-overlay">
-                    <span className="material-symbols-outlined" style={{ fontSize: 36 }}>upload_file</span>
-                    <span>Drop your file here</span>
-                  </div>
-                )}
-                {filePreview}
-                <textarea
-                  ref={textareaRef}
-                  className="vx-textarea"
-                  placeholder="Ask anything… or type / for commands"
-                  value={chatInput}
-                  rows={3}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSubmit()
-                    }
-                  }}
-                />
-                {fileInput}
-                <div className="vx-composer-actions">
-                  <div className="vx-composer-left">
-                    <button type="button" className="vx-ghost-btn" onClick={() => fileInputRef.current?.click()}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>attach_file</span>
-                      <span>{selectedFile ? 'Change' : 'Attach'}</span>
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      hidden
-                      accept=".pdf,.docx,.txt,.md,.csv,.json,image/png,image/jpeg,image/webp"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-
-                        if (!file) return
-
-                        setSelectedFile(file)
-                      }}
-                    />
-                  </div>
-                  <div className="vx-composer-right">
-                    <button
-                      type="button"
-                      className={`vx-icon-btn ${audio.isRecording ? 'vx-mic-active' : ''}`}
-                      onClick={handleMicToggle}
-                      title={audio.isRecording ? 'Stop recording' : 'Ask by voice'}
-                      disabled={audio.isTranscribing}
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: 19 }}>
-                        {audio.isTranscribing ? 'progress_activity' : audio.isRecording ? 'stop_circle' : 'mic'}
-                      </span>
-                    </button>
-                    <button
-                      className="vx-send-btn"
-                      onClick={handleSubmit}
-                      disabled={!chatInput.trim() && !selectedFile}
-                    >
-                      <span>Send</span>
-                      <span className="material-symbols-outlined" style={{ fontSize: 17 }}>arrow_upward</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Starter Cards */}
-              <div className="vx-starter-grid vu3" style={{ maxWidth: 700 }}>
-                {starterCards.map(({ icon, title, desc }) => (
-                  <div
-                    key={title}
-                    className="vx-starter-card"
-                    onClick={() => setChatInput(`Tell me about: ${title}`)}
-                  >
-                    <span className="material-symbols-outlined vx-starter-icon">{icon}</span>
-                    <div className="vx-starter-title">{title}</div>
-                    <div className="vx-starter-desc">{desc}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Quick recent links */}
-              {chatList.length > 0 && (
-                <div className="vu4" style={{ width: '100%', maxWidth: 700, display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}>
-                  {chatList.slice(0, 4).map((c, i) => (
-                    <button
-                      key={i}
-                      className="vx-quick-link"
-                      onClick={() => openChat(c.id)}
-                    >
-                      <span className="vx-quick-link-dot" />
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {c.title || 'Untitled'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
+            <WelcomeScreen
+              userName={userName}
+              chatList={chatList}
+              onOpenChat={openChat}
+              chatInput={chatInput}
+              setChatInput={setChatInput}
+              onSubmit={handleSubmit}
+              textareaRef={textareaRef}
+              drop={drop}
+              audio={audio}
+              onMic={handleMicToggle}
+            />
           ) : (
-
-            /* ───── CHAT STATE ───── */
             <>
-              <div className="vx-thread">
-                {chats[currentChatId]?.messages.map((msg, idx) => (
-                  <div key={idx}>
-                    {msg.role === 'user' ? (
-                      <div className="vx-msg-user">
-                        <p style={{ margin: 0 }}>{msg.content}</p>
-                      </div>
-                    ) : (
-                      <div className="vx-msg-ai">
-                        {/* AI header */}
-                        <div className="vx-ai-header">
-                          <div className="vx-ai-avatar">
-                            <SmallLogo />
-                          </div>
-                          <span className="vx-ai-name">Veltrix AI</span>
-                          <div className="vx-ai-badge">
-                            <span className="vx-ai-badge-dot" />
-                            Live
-                          </div>
-                        </div>
-
-                        {/* Markdown content */}
-                        <div className="vx-prose">
-
-                          {/* AI activity status */}
-                          {msg.isStreaming && (
-                            <AIActivity status={msg.status} />
-                          )}
-
-                          {msg.content && (
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm, remarkMath]}
-                              rehypePlugins={[rehypeKatex]}
-                              components={{
-                                p: ({ children }) => <p>{children}</p>,
-                                ul: ({ children }) => <ul>{children}</ul>,
-                                ol: ({ children }) => <ol>{children}</ol>,
-                                strong: ({ children }) => <strong>{children}</strong>,
-                                code: ({ children }) => <code>{children}</code>,
-                                pre: ({ children }) => <pre>{children}</pre>,
-                                img: ({ src, alt }) => <GeneratedImage src={src} alt={alt} />,
-                              }}
-                            >
-                              {msg.content}
-                            </ReactMarkdown>
-                          )}
-
-                        </div>
-
-                        {/* Action dock */}
-                        <div className="vx-dock">
-                          <button
-                            className="vx-icon-btn"
-                            title={audio.speakingMsgId === idx ? 'Stop' : 'Listen'}
-                            onClick={() => audio.playText(msg.content, idx)}
-                            disabled={!msg.content || msg.isStreaming}
-                          >
-                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                              {audio.speakingMsgId === idx ? 'stop_circle' : 'volume_up'}
-                            </span>
-                          </button>
-                          {['content_copy', 'refresh', 'thumb_up', 'thumb_down'].map(icon => (
-                            <button
-                              key={icon}
-                              className="vx-icon-btn"
-                              title={icon}
-                              onClick={icon === 'content_copy' ? () => handleCopy(msg.content, idx) : undefined}
-                            >
-                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                                {icon === 'content_copy' && copiedIdx === idx
-                                  ? 'check'
-                                  : icon}
-                              </span>
-                            </button>
-                          ))}
-
-                          {audio.isGenerating && audio.speakingMsgId === idx && (
-                            <span
-                              className="flex items-center gap-1 text-xs"
-                              style={{ marginLeft: 'auto', opacity: 0.8 }}
-                            >
-                              <span className="material-symbols-outlined vx-spin" style={{ fontSize: 14 }}>
-                                progress_activity
-                              </span>
-                              Generating audio… {audio.countdown}s
-                            </span>
-                          )}
-
-                          {audio.speakingMsgId === idx && !audio.isGenerating && (
-                            <img
-                              src="./audio-active-2.webp"
-                              alt="Audio playing"
-                              className="vx-audio-gif"
-                            />
-                          )}
-
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                <div ref={chatBottomRef} />
-              </div>
-
-              {/* Floating input bar */}
-              <div
-                className={`vx-float-bar${isDragging ? ' vx-drag-over' : ''}`}
-                style={{ alignSelf: 'center', position: 'relative' }}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                {isDragging && (
-                  <div className="vx-drop-overlay">
-                    <span className="material-symbols-outlined" style={{ fontSize: 28 }}>upload_file</span>
-                    <span>Drop your file here</span>
-                  </div>
-                )}
-                {fileInput}
-                {filePreview}
-                <form onSubmit={handleSubmit} className="vx-float-inner">
-                  <button type="button" className="vx-icon-btn" onClick={() => fileInputRef.current?.click()} title="Attach file" >
-                    <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add_circle</span>
-                  </button>
-                  <input
-                    type="text"
-                    className="vx-input"
-                    value={chatInput}
-                    onChange={e => setChatInput(e.target.value)}
-                    placeholder="Type a follow-up message…"
-                  />
-                  <button
-                    type="button"
-                    className={`vx-icon-btn ${audio.isRecording ? 'vx-mic-active' : ''}`}
-                    onClick={handleMicToggle}
-                    title={audio.isRecording ? 'Stop recording' : 'Ask by voice'}
-                    disabled={audio.isTranscribing}
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-                      {audio.isTranscribing ? 'progress_activity' : audio.isRecording ? 'stop_circle' : 'mic'}
-                    </span>
-                  </button>
-                  <button
-                    type="submit"
-                    className={`vx-circle-send ${(chatInput.trim() || selectedFile) ? 'active' : 'inactive'}`}
-                    disabled={!chatInput.trim() && !selectedFile}
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 17, color: 'white' }}>
-                      arrow_upward
-                    </span>
-                  </button>
-                </form>
-              </div>
+              <ChatThread
+                messages={chats[currentChatId]?.messages}
+                audio={audio}
+                bottomRef={chatBottomRef}
+              />
+              <FloatingInput
+                chatInput={chatInput}
+                setChatInput={setChatInput}
+                onSubmit={handleSubmit}
+                drop={drop}
+                audio={audio}
+                onMic={handleMicToggle}
+              />
             </>
-
           )}
         </div>
       </main>
