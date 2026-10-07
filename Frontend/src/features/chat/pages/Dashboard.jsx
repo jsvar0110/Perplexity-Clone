@@ -10,13 +10,8 @@ import TopBar from '../components/Topbar.jsx'
 import WelcomeScreen from '../components/WelcomeScreen.jsx'
 import ChatThread from '../components/ChatThread.jsx'
 import FloatingInput from '../components/FloatingInput.jsx'
+import MobileTabs from '../components/MobileTabs.jsx'
 import '../chat.css'
-
-const BLOBS = [
-  { cls: 'vx-blob-1', pos: { top: '-12%', left: '22%' }, size: 520, color: 'rgba(99,102,241,.28)', blur: 110 },
-  { cls: 'vx-blob-2', pos: { top: '30%', right: '-10%' }, size: 580, color: 'rgba(139,92,246,.24)', blur: 130 },
-  { cls: 'vx-blob-3', pos: { bottom: '-14%', left: '35%' }, size: 500, color: 'rgba(192,132,252,.18)', blur: 100 },
-]
 
 const Dashboard = () => {
   const chat = useChat()
@@ -26,6 +21,7 @@ const Dashboard = () => {
 
   const [chatInput, setChatInput] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const chatBottomRef = useRef(null)
   const textareaRef = useRef(null)
@@ -77,6 +73,12 @@ const Dashboard = () => {
     textareaRef.current?.focus()
   }
 
+  // mobile: open/close drawer · desktop: collapse/expand sidebar
+  const toggleSidebar = () =>
+    window.matchMedia('(max-width: 768px)').matches
+      ? setSidebarOpen((p) => !p)
+      : setCollapsed((p) => !p)
+
   const openChat = (chatId) => {
     chat.handleOpenChat(chatId, chats)
     setSidebarOpen(false)
@@ -92,7 +94,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="fixed inset-0 flex overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="fixed inset-0 flex overflow-hidden vx-root">
       {limitNotice && (
         <div className="vx-limit-toast" role="alert">
           <div>
@@ -108,6 +110,8 @@ const Dashboard = () => {
 
       <Sidebar
         open={sidebarOpen}
+        collapsed={collapsed}
+        onToggle={toggleSidebar}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         chats={filteredChats}
@@ -117,27 +121,20 @@ const Dashboard = () => {
         userName={userName}
       />
 
-      <main className="vx-main">
-        {/* Atmospheric background blobs */}
-        <div className="vx-atm">
-          {BLOBS.map((b) => (
-            <div
-              key={b.cls}
-              className={`vx-atm-blob ${b.cls}`}
-              style={{ ...b.pos, width: b.size, height: b.size, background: b.color, filter: `blur(${b.blur}px)` }}
-            />
-          ))}
-          <div className="vx-grid-bg" />
-        </div>
+      <main className={`vx-main ${hasMessages ? 'is-chat' : 'is-home'}`}>
+        <div className="vx-bg" />
 
-        <TopBar sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((p) => !p)} />
+        <TopBar
+          sidebarOpen={sidebarOpen}
+          collapsed={collapsed}
+          hasMessages={!!hasMessages}
+          userName={userName}
+          onToggleSidebar={toggleSidebar}
+        />
 
         <div className="vx-content vx-scroll" style={{ justifyContent: hasMessages ? 'flex-start' : 'center' }}>
           {!hasMessages ? (
             <WelcomeScreen
-              userName={userName}
-              chatList={chatList}
-              onOpenChat={openChat}
               chatInput={chatInput}
               setChatInput={setChatInput}
               onSubmit={handleSubmit}
@@ -152,6 +149,7 @@ const Dashboard = () => {
                 messages={chats[currentChatId]?.messages}
                 audio={audio}
                 bottomRef={chatBottomRef}
+                onEdit={setChatInput}
               />
               <FloatingInput
                 chatInput={chatInput}
@@ -164,6 +162,13 @@ const Dashboard = () => {
             </>
           )}
         </div>
+
+        {!hasMessages && (
+          <MobileTabs
+            onHome={() => dispatch(setCurrentChatId(null))}
+            onHistory={() => setSidebarOpen(true)}
+          />
+        )}
       </main>
     </div>
   )

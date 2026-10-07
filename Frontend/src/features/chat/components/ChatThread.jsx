@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
-import { SmallLogo, AIActivity, GeneratedImage } from './SmallParts.jsx'
+import { Logo, AIActivity, GeneratedImage } from './SmallParts.jsx'
 
 const mdComponents = {
   p: ({ children }) => <p>{children}</p>,
@@ -16,7 +16,7 @@ const mdComponents = {
   img: ({ src, alt }) => <GeneratedImage src={src} alt={alt} />,
 }
 
-const ChatThread = ({ messages = [], audio, bottomRef }) => {
+const ChatThread = ({ messages = [], audio, bottomRef, onEdit }) => {
   const [copiedIdx, setCopiedIdx] = useState(null)
 
   const handleCopy = async (text, idx) => {
@@ -29,77 +29,90 @@ const ChatThread = ({ messages = [], audio, bottomRef }) => {
     }
   }
 
+  const DOCK = [
+    { icon: 'content_copy', title: 'Copy' },
+    { icon: 'thumb_up', title: 'Good response' },
+    { icon: 'thumb_down', title: 'Bad response' },
+    { icon: 'refresh', title: 'Regenerate' },
+  ]
+
   return (
     <div className="vx-thread">
       {messages.map((msg, idx) => (
         <div key={idx}>
           {msg.role === 'user' ? (
-            <div className="vx-msg-user">
-              <p style={{ margin: 0 }}>{msg.content}</p>
+            <div className="vx-msg-user-row">
+              <div className="vx-msg-user">
+                <p style={{ margin: 0 }}>{msg.content}</p>
+              </div>
+              <button
+                className="vx-icon-btn vx-edit-btn"
+                title="Edit"
+                onClick={() => onEdit?.(msg.content)}
+              >
+                <span className="material-symbols-outlined">edit</span>
+              </button>
             </div>
           ) : (
             <div className="vx-msg-ai">
-              {/* AI header */}
-              <div className="vx-ai-header">
-                <div className="vx-ai-avatar"><SmallLogo /></div>
-                <span className="vx-ai-name">Veltrix AI</span>
-                <div className="vx-ai-badge">
-                  <span className="vx-ai-badge-dot" />
-                  Live
+              <div className="vx-ai-avatar"><Logo size={24} /></div>
+
+              <div className="vx-ai-card">
+                {/* Markdown content */}
+                <div className="vx-prose">
+                  {msg.isStreaming && <AIActivity status={msg.status} />}
+                  {msg.content && (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                      components={mdComponents}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  )}
                 </div>
-              </div>
 
-              {/* Markdown content */}
-              <div className="vx-prose">
-                {msg.isStreaming && <AIActivity status={msg.status} />}
-                {msg.content && (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm, remarkMath]}
-                    rehypePlugins={[rehypeKatex]}
-                    components={mdComponents}
-                  >
-                    {msg.content}
-                  </ReactMarkdown>
-                )}
-              </div>
-
-              {/* Action dock */}
-              <div className="vx-dock">
-                <button
-                  className="vx-icon-btn"
-                  title={audio.speakingMsgId === idx ? 'Stop' : 'Listen'}
-                  onClick={() => audio.playText(msg.content, idx)}
-                  disabled={!msg.content || msg.isStreaming}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                    {audio.speakingMsgId === idx ? 'stop_circle' : 'volume_up'}
-                  </span>
-                </button>
-                {['content_copy', 'refresh', 'thumb_up', 'thumb_down'].map((icon) => (
+                {/* Action dock */}
+                <div className="vx-dock">
+                  {DOCK.map(({ icon, title }) => (
+                    <button
+                      key={icon}
+                      className="vx-icon-btn"
+                      title={title}
+                      onClick={icon === 'content_copy' ? () => handleCopy(msg.content, idx) : undefined}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                        {icon === 'content_copy' && copiedIdx === idx ? 'check' : icon}
+                      </span>
+                    </button>
+                  ))}
                   <button
-                    key={icon}
                     className="vx-icon-btn"
-                    title={icon}
-                    onClick={icon === 'content_copy' ? () => handleCopy(msg.content, idx) : undefined}
+                    title={audio.speakingMsgId === idx ? 'Stop' : 'Listen'}
+                    onClick={() => audio.playText(msg.content, idx)}
+                    disabled={!msg.content || msg.isStreaming}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                      {icon === 'content_copy' && copiedIdx === idx ? 'check' : icon}
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                      {audio.speakingMsgId === idx ? 'stop_circle' : 'volume_up'}
                     </span>
                   </button>
-                ))}
+                  <button className="vx-icon-btn" title="More">
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>more_vert</span>
+                  </button>
 
-                {audio.isGenerating && audio.speakingMsgId === idx && (
-                  <span className="flex items-center gap-1 text-xs" style={{ marginLeft: 'auto', opacity: 0.8 }}>
-                    <span className="material-symbols-outlined vx-spin" style={{ fontSize: 14 }}>
-                      progress_activity
+                  {audio.isGenerating && audio.speakingMsgId === idx && (
+                    <span className="flex items-center gap-1 text-xs" style={{ marginLeft: 'auto', opacity: 0.8 }}>
+                      <span className="material-symbols-outlined vx-spin" style={{ fontSize: 14 }}>
+                        progress_activity
+                      </span>
+                      Generating audio… {audio.countdown}s
                     </span>
-                    Generating audio… {audio.countdown}s
-                  </span>
-                )}
+                  )}
 
-                {audio.speakingMsgId === idx && !audio.isGenerating && (
-                  <img src="./audio-active-2.webp" alt="Audio playing" className="vx-audio-gif" />
-                )}
+                  {audio.speakingMsgId === idx && !audio.isGenerating && (
+                    <img src="./audio-active-2.webp" alt="Audio playing" className="vx-audio-gif" />
+                  )}
+                </div>
               </div>
             </div>
           )}

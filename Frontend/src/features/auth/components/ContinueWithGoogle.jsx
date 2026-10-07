@@ -9,7 +9,7 @@ export default function ContinueWithGoogle() {
         <button
             type="button"
             onClick={handleGoogleLogin}
-            className="flex items-center justify-center gap-3 w-full h-[40px] px-3 border border-[#747775] rounded bg-[#131314] text-[#e3e3e3] text-[14px] font-medium hover:bg-[#1f1f1f]"
+            className="auth-google-btn flex items-center justify-center gap-3 w-full h-[40px] px-3 border rounded text-[14px] font-medium"
         >
             <svg
                 width="20"

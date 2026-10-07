@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { PILLS } from '../hooks/usePills.js'
 
 /* ─── Generated image with download button ─── */
 export function GeneratedImage({ src, alt }) {
@@ -59,7 +60,7 @@ export const Logo = ({ size = 28 }) => (
   />
 )
 
-/* ─── Small SVG logo for AI message header ─── */
+/* ─── Small SVG logo (kept for compatibility) ─── */
 export const SmallLogo = () => (
   <svg width="18" height="18" viewBox="0 0 120 120" fill="none">
     <defs>
@@ -117,3 +118,60 @@ export const FilePreview = ({ file, onClear }) =>
       <button type="button" onClick={onClear}>×</button>
     </div>
   ) : null
+
+/* ─── Composer quick-action pills (Deep Research / Web Search / ...) ───
+   UI shortcuts only: they prefill the input (or open the file picker).
+   Nothing extra is sent to the backend. */
+export const ToolPills = ({ pills, variant = 'inline' }) => (
+  <div className={`vx-pills vx-pills-${variant}`}>
+    {PILLS.filter((_, i) => (variant === 'below' ? i > 0 : true)).map((p) => (
+      <button
+        type="button"
+        key={p.id}
+        className={`vx-pill${pills.active === p.id ? ' is-active' : ''}${p.id === 'deep' ? ' is-primary' : ''}`}
+        onClick={() => pills.pick(p.id)}
+      >
+        <span className="material-symbols-outlined">{p.icon}</span>
+        <span className="vx-pill-label">{p.label}</span>
+      </button>
+    ))}
+  </div>
+)
+
+/* ─── Right-hand icon group of the composer (globe / attach / mic / send) ───
+   Pass `onSubmit` for a click-send button; omit it to render a form submit button. */
+export const ComposerTools = ({ pills, drop, audio, onMic, canSend, onSubmit }) => (
+  <div className="vx-composer-right">
+    <button type="button" className="vx-tool-icon" title="Web search" onClick={() => pills.pick('web')}>
+      <span className="material-symbols-outlined">language</span>
+    </button>
+    <button
+      type="button"
+      className={`vx-tool-icon${drop.selectedFile ? ' has-file' : ''}`}
+      title="Attach file"
+      onClick={() => drop.fileInputRef.current?.click()}
+    >
+      <span className="material-symbols-outlined">attach_file</span>
+    </button>
+    <button
+      type="button"
+      className={`vx-tool-icon ${audio.isRecording ? 'vx-mic-active' : ''}`}
+      onClick={onMic}
+      title={audio.isRecording ? 'Stop recording' : 'Ask by voice'}
+      disabled={audio.isTranscribing}
+    >
+      <span className="material-symbols-outlined">
+        {audio.isTranscribing ? 'progress_activity' : audio.isRecording ? 'stop_circle' : 'mic'}
+      </span>
+    </button>
+    <button
+      type={onSubmit ? 'button' : 'submit'}
+      className="vx-send"
+      onClick={onSubmit}
+      disabled={!canSend}
+      title="Send"
+    >
+      <span className="material-symbols-outlined"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-forward preview-icon"><path d="m15 17 5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg></span>
+    </button>
+  </div>
+)

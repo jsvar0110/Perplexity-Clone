@@ -1,13 +1,20 @@
-import React from 'react'
-import { FileInput, FilePreview } from './SmallParts.jsx'
+import React, { useRef } from 'react'
+import { FileInput, FilePreview, ToolPills, ComposerTools } from './SmallParts.jsx'
+import { usePills } from '../hooks/usePills.js'
 
 const FloatingInput = ({ chatInput, setChatInput, onSubmit, drop, audio, onMic }) => {
+  const inputRef = useRef(null)
   const canSend = chatInput.trim() || drop.selectedFile
+  const pills = usePills({
+    chatInput,
+    setChatInput,
+    onAttach: () => drop.fileInputRef.current?.click(),
+    focus: () => inputRef.current?.focus(),
+  })
 
   return (
     <div
       className={`vx-float-bar${drop.isDragging ? ' vx-drag-over' : ''}`}
-      style={{ alignSelf: 'center', position: 'relative' }}
       onDragOver={drop.handleDragOver}
       onDragLeave={drop.handleDragLeave}
       onDrop={drop.handleDrop}
@@ -19,43 +26,20 @@ const FloatingInput = ({ chatInput, setChatInput, onSubmit, drop, audio, onMic }
         </div>
       )}
       <FileInput inputRef={drop.fileInputRef} onChange={drop.handleFileChange} />
-      <FilePreview file={drop.selectedFile} onClear={drop.clearFile} />
       <form onSubmit={onSubmit} className="vx-float-inner">
-        <button
-          type="button"
-          className="vx-icon-btn"
-          onClick={() => drop.fileInputRef.current?.click()}
-          title="Attach file"
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add_circle</span>
-        </button>
+        <FilePreview file={drop.selectedFile} onClear={drop.clearFile} />
         <input
+          ref={inputRef}
           type="text"
           className="vx-input"
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
-          placeholder="Type a follow-up message…"
+          placeholder="Ask anything..."
         />
-        <button
-          type="button"
-          className={`vx-icon-btn ${audio.isRecording ? 'vx-mic-active' : ''}`}
-          onClick={onMic}
-          title={audio.isRecording ? 'Stop recording' : 'Ask by voice'}
-          disabled={audio.isTranscribing}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-            {audio.isTranscribing ? 'progress_activity' : audio.isRecording ? 'stop_circle' : 'mic'}
-          </span>
-        </button>
-        <button
-          type="submit"
-          className={`vx-circle-send ${canSend ? 'active' : 'inactive'}`}
-          disabled={!canSend}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 17, color: 'white' }}>
-            arrow_upward
-          </span>
-        </button>
+        <div className="vx-composer-actions">
+          <ToolPills pills={pills} variant="inline" />
+          <ComposerTools pills={pills} drop={drop} audio={audio} onMic={onMic} canSend={canSend} />
+        </div>
       </form>
     </div>
   )
