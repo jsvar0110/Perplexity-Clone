@@ -1,0 +1,227 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400&display=swap');
+
+/* ─────────────────────────────────────────────
+   PAGE  — pure black, nothing else
+───────────────────────────────────────────── */
+.vl-page {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: #000;
+  overflow: hidden;
+}
+
+/* ─────────────────────────────────────────────
+   CENTER STACK
+───────────────────────────────────────────── */
+.vl-center {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 0;
+}
+
+/* ─────────────────────────────────────────────
+   LOGO WRAP  — Netflix-style ta-dum reveal
+───────────────────────────────────────────── */
+.vl-logo-wrap {
+  position: relative;
+  display: grid; place-items: center;
+  width: 110px; height: 110px;
+  /* starts invisible, tiny */
+  opacity: 0;
+  transform: scale(.7);
+  transition: opacity .55s cubic-bezier(.22,1,.36,1),
+              transform .55s cubic-bezier(.22,1,.36,1);
+}
+.vl-logo-wrap.vl-revealed {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.vl-logo {
+  width: 78px; height: 78px;
+  object-fit: contain;
+  position: relative; z-index: 2;
+  /* start dark, bloom to full brightness */
+  filter: brightness(.1);
+  transition: filter .6s ease .15s;
+}
+.vl-logo-wrap.vl-revealed .vl-logo {
+  filter: brightness(1) drop-shadow(0 0 28px rgba(139,92,246,.75));
+}
+
+/* ─── Bloom / flare ─── */
+.vl-flare {
+  position: absolute; inset: -20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,92,246,.7) 0%, transparent 70%);
+  opacity: 0;
+  transform: scale(.5);
+  pointer-events: none;
+  z-index: 1;
+}
+/* fires once when .vl-revealed is added */
+.vl-logo-wrap.vl-revealed .vl-flare {
+  animation: vl-flare-burst .9s cubic-bezier(.22,1,.36,1) .05s forwards;
+}
+
+/* ─────────────────────────────────────────────
+   TITLE  — sweeps in via clip-path
+───────────────────────────────────────────── */
+.vl-title {
+  margin: 16px 0 0;
+  font-family: 'Bebas Neue', 'Arial Narrow', sans-serif;
+  font-size: 52px;
+  font-weight: 400;
+  letter-spacing: .22em;
+  color: #fff;
+  line-height: 1;
+
+  /* clipped off — invisible */
+  clip-path: inset(0 100% 0 0);
+  opacity: 0;
+  transition: none;
+}
+.vl-title.vl-title-in {
+  animation: vl-title-sweep .7s cubic-bezier(.4,0,.2,1) .3s forwards;
+}
+
+/* ─────────────────────────────────────────────
+   PROGRESS BAR GROUP
+───────────────────────────────────────────── */
+.vl-bar-group {
+  margin-top: 32px;
+  width: 280px;
+  display: flex; flex-direction: column; gap: 10px;
+  opacity: 0;
+  transition: opacity .5s ease;
+}
+.vl-bar-group.vl-bar-visible {
+  opacity: 1;
+}
+
+/* ─── Track ─── */
+.vl-track {
+  width: 100%;
+  height: 2px;
+  background: rgba(255,255,255,.1);
+  border-radius: 99px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ─── Fill ─── */
+.vl-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg,
+    #5b21b6 0%,
+    #7c3aed 40%,
+    #a855f7 75%,
+    #c084fc 100%
+  );
+  transition: width .06s linear;
+  position: relative;
+}
+/* Netflix-style subtle highlight sweep on fill */
+.vl-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255,255,255,.4) 70%,
+    rgba(255,255,255,.0) 100%
+  );
+  animation: vl-fill-sweep 1.4s ease-in-out infinite;
+}
+/* Glowing tip dot */
+.vl-fill::before {
+  content: '';
+  position: absolute;
+  right: -1px; top: 50%;
+  transform: translateY(-50%);
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #c084fc;
+  box-shadow: 0 0 10px 4px rgba(192,132,252,.75);
+}
+
+/* ─── Meta row ─── */
+.vl-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Status label */
+.vl-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.3);
+  font-weight: 300;
+  animation: vl-fadein .3s ease both;
+}
+
+/* Percentage */
+.vl-pct {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: .04em;
+  color: rgba(255,255,255,.75);
+  line-height: 1;
+}
+.vl-pct em {
+  font-style: normal;
+  font-size: 12px;
+  color: rgba(255,255,255,.35);
+  margin-left: 1px;
+}
+
+/* ─────────────────────────────────────────────
+   KEYFRAMES
+───────────────────────────────────────────── */
+
+/* Logo bloom fires once */
+@keyframes vl-flare-burst {
+  0%   { opacity: 0;   transform: scale(.5); }
+  30%  { opacity: 1;   transform: scale(1.05); }
+  100% { opacity: 0;   transform: scale(1.4); }
+}
+
+/* Title: clip-path sweep left → right */
+@keyframes vl-title-sweep {
+  0%   { clip-path: inset(0 100% 0 0); opacity: 0; }
+  10%  { opacity: 1; }
+  100% { clip-path: inset(0 0%   0 0); opacity: 1; }
+}
+
+/* Fill shimmer sweep */
+@keyframes vl-fill-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes vl-fadein {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ─────────────────────────────────────────────
+   ACCESSIBILITY
+───────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .vl-logo-wrap, .vl-title, .vl-fill::after { transition: none; animation: none !important; }
+  .vl-logo-wrap.vl-revealed { opacity: 1; transform: scale(1); }
+  .vl-logo-wrap.vl-revealed .vl-logo { filter: brightness(1); }
+  .vl-title.vl-title-in { clip-path: inset(0 0% 0 0); opacity: 1; }
+  .vl-bar-group.vl-bar-visible { opacity: 1; }
+}
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .vl-title { font-size: 38px; }
+  .vl-bar-group { width: 220px; }
+}
