@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate, useSearchParams, Navigate } from 'react-router'
 import { useSelector } from 'react-redux'
-import { useAuth } from '../hook/useAuth'
+import { useAuth } from '../hook/useAuth.js'
 import ContinueWithGoogle from '../components/ContinueWithGoogle'
 import '../auth.css'
 

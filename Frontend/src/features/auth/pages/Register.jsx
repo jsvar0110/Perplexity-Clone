@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { useAuth } from '../hook/useAuth'
-import ContinueWithGoogle from '../components/ContinueWithGoogle'
+import { useAuth } from '../hook/useAuth.js'
+import ContinueWithGoogle from '../components/ContinueWithGoogle.jsx'
 import '../auth.css'
 
 const VeltrixLogo = ({ size = 52 }) => (

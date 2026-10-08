@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from "react"
-import { transcribeAudio, fetchSpeech } from "../service/audio.api"
+import { transcribeAudio, fetchSpeech } from "../service/audio.api.js"
 import {useDispatch} from "react-redux"
-import { setLimitNotice } from "../chat.slice"
+import { setLimitNotice } from "../chat.slice.js"
 
 // Strip markdown/citations and split into chunks Chatterbox can handle
 const splitForTts = (raw, max = 280) => {

@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { useChat } from '../hooks/useChat'
-import { useAudio } from '../hooks/useAudio'
+import { useChat } from '../hooks/useChat.js'
+import { useAudio } from '../hooks/useAudio.js'
 import { useFileDrop } from '../hooks/UseFileDrop.js'
-import { setCurrentChatId, setLimitNotice } from '../chat.slice'
+import { setCurrentChatId, setLimitNotice } from '../chat.slice.js'
 
 import Sidebar from '../components/Sidebar.jsx'
 import TopBar from '../components/Topbar.jsx'

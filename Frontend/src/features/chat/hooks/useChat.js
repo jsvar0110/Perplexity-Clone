@@ -1,4 +1,4 @@
-import { initializeSocketConnection } from "../service/chat.socket";
+import { initializeSocketConnection } from "../service/chat.socket.js";
 import {
   createChat,
   generateTitle,

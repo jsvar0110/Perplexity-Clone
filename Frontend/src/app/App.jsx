@@ -1,7 +1,7 @@
 import "./index.css"
 import { useEffect } from "react"
 import { RouterProvider } from "react-router"
-import { router } from "./app.routes"
+import { router } from "./app.routes.js"
 import { useAuth } from "../features/auth/hook/useAuth"
 
 
