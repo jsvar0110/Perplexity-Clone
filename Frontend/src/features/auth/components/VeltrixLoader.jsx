@@ -45,19 +45,18 @@ export default function VeltrixLoader() {
     <main className="vl-page" role="status" aria-live="polite" aria-label="Loading Veltrix">
       <div className="vl-center">
 
-        {/* Logo — Netflix-style dramatic reveal */}
+        
         <div className={`vl-logo-wrap ${revealed ? 'vl-revealed' : ''}`}>
           <img src="/Veltrix2.png" alt="Veltrix" className="vl-logo" />
-          {/* Bloom flare that fires once */}
+          
           <span className="vl-flare" aria-hidden="true" />
         </div>
 
-        {/* Brand name — sweeps in after logo */}
+        
         <h1 className={`vl-title ${revealed ? 'vl-title-in' : ''}`}>
           VELTRIX
         </h1>
 
-        {/* Progress bar group — fades in after reveal */}
         <div className={`vl-bar-group ${revealed ? 'vl-bar-visible' : ''}`}>
           <div className="vl-track">
             <div className="vl-fill" style={{ width: `${pct}%` }} />

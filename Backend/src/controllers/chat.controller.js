@@ -54,9 +54,9 @@ export async function streamMessage(req, res) {
         })
     }
 
-    // ==========================================
+    
     // SSE HEADERS
-    // ==========================================
+    
 
     res.setHeader("Content-Type", "text/event-stream")
     res.setHeader("Cache-Control", "no-cache")
@@ -66,9 +66,9 @@ export async function streamMessage(req, res) {
     res.flushHeaders?.()
 
 
-    // ==========================================
+    
     // SEND SSE EVENT
-    // ==========================================
+    
 
     const sendEvent = (data) => {
 
@@ -82,9 +82,9 @@ export async function streamMessage(req, res) {
 
         let fileContent = await extractFileContent(file)
         
-        // ==========================================
+        
         // SAVE USER MESSAGE
-        // ==========================================
+        
 
         await messageModel.create({
             chat: chatId,
@@ -93,18 +93,18 @@ export async function streamMessage(req, res) {
         })
 
 
-        // ==========================================
+        
         // GET CHAT HISTORY
-        // ==========================================
+        
 
         const messages = await messageModel.find({
             chat: chatId
         })
 
 
-        // ==========================================
+        
         // START AI STREAM
-        // ==========================================
+        
 
         const fullResponse = await streamResponse(
             messages,
@@ -114,9 +114,9 @@ export async function streamMessage(req, res) {
         )
 
 
-        // ==========================================
+        
         // SAVE COMPLETE AI RESPONSE
-        // ==========================================
+        
 
         const aiMessage = await messageModel.create({
             chat: chatId,
@@ -125,9 +125,9 @@ export async function streamMessage(req, res) {
         })
 
 
-        // ==========================================
+        
         // SEND FINAL EVENT
-        // ==========================================
+        
 
         sendEvent({
             type: "saved",

@@ -19,9 +19,9 @@ export function extractChunkText(chunk) {
 
 export function handleToolEvent(event, sendEvent) {
 
-  // =========================================
+  
   // TOOL START
-  // =========================================
+  
 
   if (event.event === "on_tool_start") {
     if (event.name === "searchInternet") {
@@ -39,9 +39,9 @@ export function handleToolEvent(event, sendEvent) {
 
   }
 
-  // =========================================
+  
   // TOOL END
-  // =========================================
+  
 
   if (event.event === "on_tool_end") {
     if (event.name === "searchInternet") {
