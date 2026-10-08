@@ -8,7 +8,7 @@ import { Navigate } from "react-router";
 export const router = createBrowserRouter([
 
     {
-        path: "/login",
+        path: "/ogin",
         element: <Login />
     }
     ,
