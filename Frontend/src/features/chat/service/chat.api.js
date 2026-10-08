@@ -1,7 +1,8 @@
 import axios from "axios"
+import { API_URL } from "../../../config/api"
 
 const api = axios.create({
-    baseURL : "http://localhost:3000" ,
+    baseURL : API_URL  ,
     withCredentials : true
 })
 
@@ -25,7 +26,7 @@ export const streamMessage = async ({ message ,chatId , file ,onEvent }) => {
 
 
     const response = await fetch(
-        "http://localhost:3000/api/chats/message/stream",
+        `${API_URL}/api/chats/message/stream`,
         {
             method: "POST",
 

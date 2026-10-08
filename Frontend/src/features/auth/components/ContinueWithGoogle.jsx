@@ -1,8 +1,10 @@
+import { API_URL } from "../../../config/api.js"
+
 export default function ContinueWithGoogle() {
 
     const handleGoogleLogin = () => {
         window.location.href =
-            "http://localhost:3000/api/auth/google";
+            `${API_URL}/api/auth/google`;
     };
 
     return (

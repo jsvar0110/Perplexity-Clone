@@ -1,9 +1,9 @@
 import { io } from "socket.io-client";
-
+import { API_URL } from "../../../config/api.js"
 
 export const initializeSocketConnection = () => {
 
-    const socket = io("http://localhost:3000" , {
+    const socket = io( API_URL , {
         withCredentials : true
     })
 
