@@ -28,7 +28,9 @@ export async function register(req, res) {
 
     const emailVerificationToken = jwt.sign({
         email: user.email,
-    }, process.env.JWT_SECRET)
+        purpose: "email-verification"
+
+    }, process.env.JWT_SECRET , { expiresIn: '24h' })
 
 
 
@@ -176,6 +178,13 @@ export async function verifyEmail(req, res) {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET)
 
+        if (decoded.purpose !== "email-verification") {
+            return res.status(400).json({
+                message: "Invalid verification token",
+                success: false
+            })
+        }
+
         const user = await userModel.findOne({ email: decoded.email })
 
         if (!user) {
@@ -208,6 +217,13 @@ export async function verifyEmail(req, res) {
 
     } catch (error) {
 
+
+        if (error.name === "TokenExpiredError") {
+            return res.status(400).json({
+                message: "Verification link has expired",
+                success: false
+            })
+        }
 
         return res.status(400).json({
             message: "Invalidor or expired token",
