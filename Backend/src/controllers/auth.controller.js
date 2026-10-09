@@ -33,6 +33,30 @@ export async function register(req, res) {
     }, process.env.JWT_SECRET, { expiresIn: '24h' })
 
 
+    try {
+
+        await sendEmail({
+            to: email,
+            subject: "Welcome to Veltrix!",
+            html: `
+                <p>Hi ${username},</p>
+                <p>Thank you for registering at <strong>Veltrix</strong>. We're excited to have you on board!</p>
+                <a href="${process.env.BACKEND_URL}/api/auth/verify-email?token=${emailVerificationToken}">Verify Email</a>
+                <p>If you did not create an account, please ignore this email.</p>
+                <p>Best regards,<br>The Veltrix Team</p>
+        `
+        })
+
+    } catch (err) {
+
+        console.error("Verification email failed:", err)
+        await userModel.deleteOne({ _id: user._id })
+        return res.status(500).json({
+            message: "Could not send verification email. Please try again.",
+            success: false
+        })
+
+    }
 
     await sendEmail({
         to: email,
