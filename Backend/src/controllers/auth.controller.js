@@ -58,17 +58,6 @@ export async function register(req, res) {
 
     }
 
-    await sendEmail({
-        to: email,
-        subject: "Welcome to Veltrix!",
-        html: `
-                <p>Hi ${username},</p>
-                <p>Thank you for registering at <strong>Veltrix</strong>. We're excited to have you on board!</p>
-                <a href="${process.env.BACKEND_URL}/api/auth/verify-email?token=${emailVerificationToken}">Verify Email</a>
-                <p>If you did not create an account, please ignore this email.</p>
-                <p>Best regards,<br>The Veltrix Team</p>
-        `
-    })
 
     res.status(201).json({
         message: "user registered successfully",
