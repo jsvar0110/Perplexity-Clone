@@ -2,6 +2,7 @@ import { Router } from "express";
 import { getMe, login, register, verifyEmail, googleCallback } from "../controllers/auth.controller.js";
 import { loginValidator, registerValidator } from "../validators/auth.validator.js";
 import { authUser } from "../middlewares/auth.middleware.js";
+import { loginLimiter, registerLimiter } from "../middlewares/auth-rate-limt.middleware.js";
 import passport from "passport";
 
 const authRouter = Router()
@@ -14,7 +15,7 @@ const authRouter = Router()
  */
 
 
-authRouter.post('/register', registerValidator, register)
+authRouter.post('/register', registerLimiter , registerValidator, register)
 
 
 
@@ -25,7 +26,7 @@ authRouter.post('/register', registerValidator, register)
  * @body { email, password }
  */
 
-authRouter.post('/login', loginValidator, login)
+authRouter.post('/login', loginLimiter, loginValidator, login)
 
 
 authRouter.get('/get-me', authUser, getMe)

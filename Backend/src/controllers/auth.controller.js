@@ -129,7 +129,7 @@ export async function login(req, res) {
         id: user._id,
         username: user.username,
 
-    }, process.env.JWT_SECRET, { expiresIn: '7d' })
+    }, process.env.JWT_SECRET, { expiresIn: '1h' })
 
     const isProduction = process.env.NODE_ENV === "production";
 
@@ -137,7 +137,8 @@ export async function login(req, res) {
         httpOnly: true,
         secure: isProduction,
         sameSite: isProduction ? "none" : "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000
+        maxAge: 60 * 60 * 1000 ,
+        path: "/"
     });
 
     res.status(200).json({
@@ -304,7 +305,7 @@ export async function googleCallback(req, res) {
         const token = jwt.sign({
             id: user._id,
             username: user.username,
-        }, process.env.JWT_SECRET, { expiresIn: '7d' })
+        }, process.env.JWT_SECRET, { expiresIn: '1h' })
 
         const isProduction = process.env.NODE_ENV === "production";
 
@@ -312,7 +313,8 @@ export async function googleCallback(req, res) {
             httpOnly: true,
             secure: isProduction,
             sameSite: isProduction ? "none" : "lax",
-            maxAge: 7 * 24 * 60 * 60 * 1000
+            maxAge:  60 * 60 * 1000 ,
+            path: "/"
         });
 
         return res.redirect(`${FE}/`)
