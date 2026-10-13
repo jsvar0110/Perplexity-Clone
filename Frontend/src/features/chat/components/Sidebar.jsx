@@ -41,6 +41,7 @@ const Sidebar = ({
   onOpenChat,
   onNewChat,
   userName,
+  onLogout
 }) => {
   const user = useSelector((state) => state.auth.user)
   const [showSearch, setShowSearch] = useState(false)
@@ -140,10 +141,12 @@ const Sidebar = ({
             <span className="vx-user-name">{userName}</span>
             {user?.email && <span className="vx-user-email">{user.email}</span>}
           </div>
-          {/* <button className="vx-user-gear" title="Settings">
-            <span className="material-symbols-outlined">settings</span>
-          </button> */}
         </div>
+
+        <button className="vx-logout-btn" onClick={onLogout} title="Log out" aria-label="Log out">
+          <span className="material-symbols-outlined">logout</span>
+          <span className="vx-logout-text">Log out</span>
+        </button>
       </div>
     </aside>
   )

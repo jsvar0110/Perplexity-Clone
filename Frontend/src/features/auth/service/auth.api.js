@@ -31,3 +31,10 @@ export async function getMe() {
     return response.data
 
 }
+
+export async function logOut(){
+ 
+    const response = await api.post('/api/auth/logout')
+    return response.data
+
+}

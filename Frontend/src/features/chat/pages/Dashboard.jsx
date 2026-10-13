@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useChat } from '../hooks/useChat.js'
+import { useAuth } from '../../auth/hook/useAuth.js'
 import { useAudio } from '../hooks/useAudio.js'
 import { useFileDrop } from '../hooks/UseFileDrop.js'
 import { setCurrentChatId, setLimitNotice } from '../chat.slice.js'
@@ -18,6 +19,7 @@ const Dashboard = () => {
   const audio = useAudio()
   const drop = useFileDrop()
   const dispatch = useDispatch()
+  const {handleLogOut} = useAuth()
 
   const [chatInput, setChatInput] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -43,8 +45,10 @@ const Dashboard = () => {
   const hasMessages = currentChatId && chats[currentChatId]?.messages?.length > 0
 
   useEffect(() => {
-    chat.initializeSocketConnection()
+    const socket = chat.initializeSocketConnection()
     chat.handleGetChats()
+
+    return () => socket.disconnect()
   }, [])
 
   // Scroll to bottom when switching chats
@@ -119,6 +123,7 @@ const Dashboard = () => {
         onOpenChat={openChat}
         onNewChat={() => dispatch(setCurrentChatId(null))}
         userName={userName}
+        onLogout={handleLogOut}
       />
 
       <main className={`vx-main ${hasMessages ? 'is-chat' : 'is-home'}`}>

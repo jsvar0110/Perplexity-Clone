@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getMe, login, register, verifyEmail, googleCallback } from "../controllers/auth.controller.js";
+import { getMe, login, register, verifyEmail, googleCallback , logOut } from "../controllers/auth.controller.js";
 import { loginValidator, registerValidator } from "../validators/auth.validator.js";
 import { authUser } from "../middlewares/auth.middleware.js";
 import { loginLimiter, registerLimiter } from "../middlewares/auth-rate-limt.middleware.js";
@@ -30,6 +30,8 @@ authRouter.post('/login', loginLimiter, loginValidator, login)
 
 
 authRouter.get('/get-me', authUser, getMe)
+
+authRouter.post('/logout' , logOut)
 
 /**
  * @route GET /api/auth/verify-email
