@@ -1,6 +1,7 @@
 import userModel from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../services/mail.service.js";
+import { id } from "zod/v4/locales";
 
 
 /* Register */
@@ -128,6 +129,7 @@ export async function login(req, res) {
 
         id: user._id,
         username: user.username,
+        tokenVersion: user.tokenVersion ?? 0 ,
 
     }, process.env.JWT_SECRET, { expiresIn: '1h' })
 
@@ -189,20 +191,39 @@ export async function getMe(req, res) {
 /* LogOuT */
 
 export async function logOut(req, res) {
+    
+    try {
+        
+        await userModel.findByIdAndUpdate(
+            req.user.id,
+            {
+                $inc: { tokenVersion: 1 },
+            }
+        );
 
-    const isProduction = process.env.NODE_ENV === "production" 
+        const isProduction = process.env.NODE_ENV === "production" 
+    
+        res.clearCookie("token" , {
+            httpOnly : true ,
+            secure : isProduction ,
+            sameSite : isProduction ?  "none" : "lax" ,
+            path : '/'
+        })
+    
+        res.status(200).json({
+            message : "Logged out successfully" ,
+            success : true
+        })
 
-    res.clearCookie("token" , {
-        httpOnly : true ,
-        secure : isProduction ,
-        sameSite : isProduction ?  "none" : "lax" ,
-        path : '/'
-    })
+    } catch (err) {
+        console.error('Logout failed', err)
 
-    res.status(200).json({
-        message : "Logged out successfully" ,
-        success : true
-    })
+        return res.status(500).json({
+            message:"Logout failed, Please try again" ,
+            success : false
+        })
+    }
+
 
 }
 
@@ -325,8 +346,11 @@ export async function googleCallback(req, res) {
         }
 
         const token = jwt.sign({
+            
             id: user._id,
             username: user.username,
+            tokenVersion: user.tokenVersion ?? 0 , 
+
         }, process.env.JWT_SECRET, { expiresIn: '1h' })
 
         const isProduction = process.env.NODE_ENV === "production";
@@ -348,3 +372,90 @@ export async function googleCallback(req, res) {
 
     }
 }
+
+
+ /* Forgot Password */
+
+ export async function forgotPassword ( req , res ) {
+
+    const email = req.body.email?.trim().toLowerCase()
+    
+    try {
+        
+        const user = await userModel.findOne({email})
+
+        if (user && user.password && user.verified){
+
+            const resetToken = jwt.sign(
+                {id: user._id , purpose :"password-reset" } ,
+                process.env.JWT_SECRET + user.password ,
+                {expiresIn : '20m'}
+            )
+            await sendEmail ({
+                to: user.email,
+                subject: "Reset your Veltrix password",
+                html: `
+                    <p>Hi ${user.username},</p>
+                    <p>We received a request to reset your <strong>Veltrix</strong> password. This link expires in 15 minutes.</p>
+                    <a href="${process.env.FRONTEND_URL}/reset-password?token=${resetToken}">Reset Password</a>
+                    <p>If you did not request this, you can safely ignore this email.</p>
+                    <p>Best regards,<br>The Veltrix</p>
+                `
+            })
+
+        }
+
+    } catch (err) {
+        console.error("Forgot password Failed : ", err)
+    }
+
+    return res.status(200).json({
+        message : "If an account exists with email , a reset link has been sent." ,
+        success : true
+    })
+
+ }
+
+
+ /* Reset Password */
+
+ export async function resetPassword( req , res ) {
+    
+    const {token , password} = req.body
+
+    try {
+        
+        const payload = jwt.decode(token)
+
+        if (!payload || payload.purpose !== "password-reset") throw new Error("Invalid token")
+
+        const user = await userModel.findById(payload.id)
+
+        if (!user || !user.password) throw new Error("Invalid Token")
+
+        // Throws if tampered or expired. The secret includes the old hash, so it fails once the password has changed
+        jwt.verify(token, process.env.JWT_SECRET + user.password)
+
+        user.password = password ;
+
+        user.tokenVersion = (user.tokenVersion ?? 0) + 1; // additional security if someone changes password prev jwt should not be available //
+
+        await user.save()
+
+        return res.status(200).json({
+            message : "Password reset succesfully .You can now log in" ,
+            success : true
+        })
+
+
+    } catch (error) {
+        
+        return res.status(200).json({
+            message : error.name === "TokenExpiredError"
+            ? "Reset link has expired. Please request a new one."
+            : "Invalid or expired reset link",
+            success: false
+        })
+    }
+
+ }

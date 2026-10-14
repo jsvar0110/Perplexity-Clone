@@ -140,6 +140,10 @@
 .auth-switch a { color: #c69cff; text-decoration: underline; text-underline-offset: 3px; font-weight: 500; }
 .auth-password-rules { display: flex; flex-direction: column; gap: 7px; margin: -1px 0 3px; color: #8f8da0; font-size: 12px; }
 
+
+.auth-success { color: #9be7b0 !important; font-size: 12.5px !important; }
+.auth-forgot { align-self: flex-end; margin-top: -4px; color: #c69cff; font-size: 12.5px; text-decoration: underline; text-underline-offset: 3px; }
+
 /* Google component is kept functional; this only restyles its existing button. */
 .auth-card .google-btn,
 .auth-card button[class*="google"],

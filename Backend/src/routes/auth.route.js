@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { getMe, login, register, verifyEmail, googleCallback , logOut } from "../controllers/auth.controller.js";
-import { loginValidator, registerValidator } from "../validators/auth.validator.js";
+import { getMe, login, register, verifyEmail, googleCallback , logOut , forgotPassword , resetPassword } from "../controllers/auth.controller.js";
+import { loginValidator, registerValidator , forgotPasswordValidator , resetPasswordValidator } from "../validators/auth.validator.js";
 import { authUser } from "../middlewares/auth.middleware.js";
-import { loginLimiter, registerLimiter } from "../middlewares/auth-rate-limt.middleware.js";
+import { loginLimiter, registerLimiter , forgotPasswordLimiter , resetPasswordLimiter } from "../middlewares/auth-rate-limt.middleware.js";
 import passport from "passport";
 
 const authRouter = Router()
@@ -31,7 +31,11 @@ authRouter.post('/login', loginLimiter, loginValidator, login)
 
 authRouter.get('/get-me', authUser, getMe)
 
-authRouter.post('/logout' , logOut)
+authRouter.post('/logout' , authUser, logOut)
+
+authRouter.post('/forgot-password', forgotPasswordLimiter , forgotPasswordValidator , forgotPassword)
+
+authRouter.post('/reset-password' , resetPasswordLimiter , resetPasswordValidator , resetPassword)
 
 /**
  * @route GET /api/auth/verify-email

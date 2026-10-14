@@ -92,6 +92,9 @@ export default function Login() {
                 </button>
               )}
             />
+            
+            <Link to="/forgot-password" className="auth-forgot">Forgot password?</Link>
+
             <button type="submit" className="auth-submit-btn">Sign In <span>→</span></button>
           </form>
 

@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema(
             type: String,
             unique: true,
             sparse: true,
+        },
+        tokenVersion: {
+            type: Number,
+            default: 0
         }
     },
     { timestamps: true }

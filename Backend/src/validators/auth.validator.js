@@ -59,3 +59,27 @@ export const loginValidator = [
     validate
 ]
 
+export const forgotPasswordValidator = [
+
+    body("email")
+        .trim()
+        .notEmpty().withMessage("Email is required")
+        .isEmail().withMessage("Please provide a valid email")
+
+    ,
+    validate
+
+]
+
+export const resetPasswordValidator = [
+
+    body("token")
+        .notEmpty().withMessage("Reset token is required")
+
+    ,
+    body("password")
+        .notEmpty().withMessage("Password is required")
+        .isLength({min : 6 }).withMessage("Password atleast be 6 character")
+    ,
+    validate
+]
