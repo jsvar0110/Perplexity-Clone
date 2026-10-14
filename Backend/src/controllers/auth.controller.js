@@ -289,7 +289,7 @@ export async function verifyEmail(req, res) {
         }
 
         return res.status(400).json({
-            message: "Invalidor or expired token",
+            message: "Invalid or expired token",
             success: false,
             err: error.message
         })
@@ -383,6 +383,14 @@ export async function googleCallback(req, res) {
     try {
         
         const user = await userModel.findOne({email})
+
+        if (user && !user.password && user.googleId) {
+            return res.status(200).json({
+                success: false,
+                code: "GOOGLE_ONLY_ACCOUNT",
+                message:"This account uses Google Sign-In. Password reset isn't available. Please continue with Google.",
+            });
+        }
 
         if (user && user.password && user.verified){
 

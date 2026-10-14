@@ -16,7 +16,18 @@ export default function ForgotPassword() {
     setLoading(true)
     try {
       const data = await forgotPassword({ email })
+      
+      if (data.code === "GOOGLE_ONLY_ACCOUNT") {
+        
+        setError("")
+        setMessage("")
+        window.alert("This account uses Google Sign-In. Password reset isn't available. Please continue with Google.")
+        
+        return
+      }
+
       setMessage(data.message)
+
     } catch (err) {
       setError(err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || 'Something went wrong. Try again.')
     } finally {

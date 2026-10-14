@@ -1,7 +1,7 @@
 import jwt, { decode } from "jsonwebtoken";
 import userModel from "../models/user.model.js";
 
-export function authUser( req , res , next ) {
+export async function authUser( req , res , next ) {
     
 
     const token = req.cookies?.token 
@@ -24,7 +24,7 @@ export function authUser( req , res , next ) {
             process.env.JWT_SECRET
         )
 
-        const user = userModel.findById(decoded.id).select("tokenVersion")
+        const user = await userModel.findById(decoded.id).select("tokenVersion")
 
         if (!user) {
             return res.status(401).json({
@@ -59,7 +59,7 @@ export function authUser( req , res , next ) {
         }
 
         console.error("Authentication error " , err)
-        
+
         return res.status(500).json({
             message: "Authentication service unavailable" ,
             success: false 
