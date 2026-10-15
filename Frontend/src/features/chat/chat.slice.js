@@ -8,7 +8,7 @@ const chatSlice = createSlice({
     currentChatId: null,
     isLoading: false,
     error: null,
-    limitNotice : null ,
+    limitNotice: null,
   },
   reducers: {
     createNewChat: (state, action) => {
@@ -127,6 +127,18 @@ const chatSlice = createSlice({
         lastMessage.status = "complete";
       }
     },
+
+    removeChatFromState: (state, action) => {
+      const chatId = action.payload;
+
+      delete state.chats[chatId];
+
+      // Returning to the welcome screen if the active chat was deleted
+      if (state.currentChatId === chatId) {
+        state.currentChatId = null;
+      }
+    },
+
     setChats: (state, action) => {
       state.chats = action.payload;
     },
@@ -151,7 +163,7 @@ export const {
   setLoading,
   setError,
   setLimitNotice,
-  
+
   createNewChat,
   updateChatTitle,
   addNewMessage,
@@ -161,6 +173,7 @@ export const {
   resetStreamingMessage,
   updateStreamingStatus,
   finishStreamingMessage,
+  removeChatFromState,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

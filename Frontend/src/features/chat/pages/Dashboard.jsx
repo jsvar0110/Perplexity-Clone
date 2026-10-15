@@ -88,6 +88,32 @@ const Dashboard = () => {
     setSidebarOpen(false)
   }
 
+  
+const handleDeleteChatClick = async (chatId) => {
+  const chatToDelete = chats[chatId];
+
+  if (!chatToDelete) return;
+
+  const confirmed = window.confirm(
+    `Delete "${chatToDelete.title || "Untitled Chat"}"?\n\n` +
+    "This will permanently delete the conversation and its messages."
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await chat.handleDeleteChat(chatId);
+  } catch (error) {
+    console.error("Failed to delete chat:", error);
+
+    window.alert(
+      error.response?.data?.message ||
+      "Unable to delete this chat. Please try again."
+    );
+  }
+};
+
+
   const handleMicToggle = async () => {
     if (audio.isRecording) {
       const text = await audio.stopRecording()
@@ -122,6 +148,7 @@ const Dashboard = () => {
         currentChatId={currentChatId}
         onOpenChat={openChat}
         onNewChat={() => dispatch(setCurrentChatId(null))}
+        onDeleteChat={handleDeleteChatClick}
         userName={userName}
         onLogout={handleLogOut}
       />

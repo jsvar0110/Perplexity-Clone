@@ -13,7 +13,7 @@ import {
   setCurrentChatId,
   setError,
   setLoading,
-  setLimitNotice ,
+  setLimitNotice,
 
   createNewChat,
   updateChatTitle,
@@ -24,6 +24,7 @@ import {
   resetStreamingMessage,
   updateStreamingStatus,
   finishStreamingMessage,
+  removeChatFromState,
 } from "../chat.slice";
 import { useDispatch } from "react-redux";
 
@@ -69,15 +70,15 @@ export const useChat = () => {
 
   // }
 
-  async function handleSendMessage({ message, chatId ,file }) {
+  async function handleSendMessage({ message, chatId, file }) {
     dispatch(setLoading(true));
     dispatch(setError(null));
 
     let activeChatId = chatId;
-    
+
     try {
 
-      
+
       // 1. CREATE NEW CHAT
       // ==========================================
 
@@ -98,7 +99,7 @@ export const useChat = () => {
         dispatch(setCurrentChatId(newChat._id));
       }
 
-      
+
       // 2. SHOW USER MESSAGE IMMEDIATELY
       // ==========================================
 
@@ -110,7 +111,7 @@ export const useChat = () => {
         }),
       );
 
-      
+
       // 3. GENERATE TITLE
       // ==========================================
 
@@ -132,7 +133,7 @@ export const useChat = () => {
           });
       }
 
-      
+
       // 4. CREATE EMPTY AI MESSAGE
       // ==========================================
 
@@ -142,7 +143,7 @@ export const useChat = () => {
         }),
       );
 
-      
+
       // 5. STREAM BUFFER
       // ==========================================
 
@@ -151,7 +152,7 @@ export const useChat = () => {
       let tokenBuffer = "";
       let flushTimer = null;
 
-      
+
       // Flush buffered tokens into Redux
       // ------------------------------------------
 
@@ -172,7 +173,7 @@ export const useChat = () => {
         flushTimer = null;
       };
 
-      
+
       // 6. START STREAM
       // ==========================================
 
@@ -182,7 +183,7 @@ export const useChat = () => {
         chatId: activeChatId,
 
         onEvent: (event) => {
-          
+
           // STATUS
           // -------------------------------
 
@@ -197,7 +198,7 @@ export const useChat = () => {
             return;
           }
 
-          
+
           // RESTART
 
 
@@ -221,7 +222,7 @@ export const useChat = () => {
             return;
           }
 
-          
+
           // TOKEN
           // -------------------------------
 
@@ -286,7 +287,7 @@ export const useChat = () => {
           if (event.type === "error") {
             console.error("AI streaming error:", event.message);
 
-            dispatch(finishStreamingMessage({chatId : activeChatId}));
+            dispatch(finishStreamingMessage({ chatId: activeChatId }));
 
             return;
           }
@@ -301,8 +302,8 @@ export const useChat = () => {
     } catch (error) {
       console.error("Chat streaming error:", error);
 
-       dispatch(setError(error.message || "Something went wrong"));
-        if (activeChatId) dispatch(finishStreamingMessage({ chatId: activeChatId }));
+      dispatch(setError(error.message || "Something went wrong"));
+      if (activeChatId) dispatch(finishStreamingMessage({ chatId: activeChatId }));
     } finally {
       dispatch(setLoading(false));
     }
@@ -354,11 +355,22 @@ export const useChat = () => {
     dispatch(setCurrentChatId(chatId));
   }
 
+
+  async function handleDeleteChat(chatId) {
+    // Wait for the backend to confirm deletion first
+    await deleteChat(chatId);
+
+    // Only then update the local Redux state
+    dispatch(removeChatFromState(chatId));
+  }
+
+
   return {
     initializeSocketConnection,
     handleSendMessage,
     handleGetChats,
     handleOpenChat,
+    handleDeleteChat,
   };
 };
 
