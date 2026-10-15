@@ -2,6 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import { authUser } from "../middlewares/auth.middleware.js";
 import { speechToText, textToSpeech } from "../controllers/audio.controller.js";
+import { aiLimiter } from "../middlewares/auth-rate-limt.middleware.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -10,7 +11,7 @@ const upload = multer({
 
 const audioRouter = Router();
 
-audioRouter.post("/transcribe", authUser, upload.single("audio"), speechToText);
-audioRouter.post("/speech", authUser, textToSpeech);
+audioRouter.post("/transcribe", authUser, aiLimiter, upload.single("audio"), speechToText);
+audioRouter.post("/speech", authUser, aiLimiter , textToSpeech);
 
 export default audioRouter;

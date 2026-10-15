@@ -45,3 +45,12 @@ export const resetPasswordLimiter = rateLimit({
     message: "Too many attempts. Try again later."
   }
 })
+
+export const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 20,
+  keyGenerator: (req) => req.user.id,   // runs after authUser
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { success: false, message: "Too many requests. Slow down." }
+})

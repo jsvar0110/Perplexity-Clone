@@ -3,6 +3,14 @@ import {extractFileContent} from "../services/file.service.js"
 
 import chatModel from '../models/chat.model.js'
 import messageModel from "../models/message.model.js"
+import mongoose from "mongoose";
+
+async function getOwnedChat (chatId , userId){
+
+    if (typeof chatId !== "string" || !mongoose.isValidObjectId(chatId)) return null
+    return chatModel.findOne({_id : chatId , user : userId}) 
+}
+
 
 export async function sendMessage(req, res) {
 
@@ -14,16 +22,24 @@ export async function sendMessage(req, res) {
         })
     }
 
+    const chat = await getOwnedChat(chatId , req.user.id)
+
+    if(!chat) return res.status(404).json({ message: "Chat not found" })
+
+    if (typeof message !== "string" || !message.trim() ) {
+        return res.status(400).json({ message: "Message is required" })
+    }
+
     // Save user message
     await messageModel.create({
-        chat: chatId,
+        chat: chat._id,
         content: message,
         role: 'user'
     })
 
     // Get previous messages
     const messages = await messageModel.find({
-        chat: chatId
+        chat: chat._id
     })
 
     // Generate AI response
@@ -31,7 +47,7 @@ export async function sendMessage(req, res) {
 
     // Save AI message
     const aiMessage = await messageModel.create({
-        chat: chatId,
+        chat: chat._id,
         content: result,
         role: 'ai'
     })
@@ -54,6 +70,8 @@ export async function streamMessage(req, res) {
         })
     }
 
+    const chat = await getOwnedChat(chatId, req.user.id)
+    if (!chat) return res.status(404).json({ message: "Chat not found" })
     
     // SSE HEADERS
     
@@ -87,7 +105,7 @@ export async function streamMessage(req, res) {
         
 
         await messageModel.create({
-            chat: chatId,
+            chat: chat._id,
             content: message,
             role: "user"
         })
@@ -98,7 +116,7 @@ export async function streamMessage(req, res) {
         
 
         const messages = await messageModel.find({
-            chat: chatId
+            chat: chat._id
         })
 
 
@@ -119,7 +137,7 @@ export async function streamMessage(req, res) {
         
 
         const aiMessage = await messageModel.create({
-            chat: chatId,
+            chat: chat._id,
             content: fullResponse,
             role: "ai"
         })
@@ -242,17 +260,16 @@ export async function deleteChat(req , res) {
         user : req.user.id
 
     })
-
-
-    await messageModel.deleteMany({
-        chat : chatId
-    })
     
     if (!chat){
         return res.status(404).json({
             message : "Chat not found"
         })
     }
+    
+    await messageModel.deleteMany({ 
+        chat : chat._id 
+    })
 
     res.status(200).json({
         message : "Chat deleted successfully"
